@@ -54,6 +54,28 @@ verifyFalse(testCase, isequal(sort(listed), sort(["data/raw/a.set";"data/raw/c.s
 verifyEqual(testCase, numel(unique(listed)), 2);
 end
 
+function testExactStalePartialSiblingMatching(testCase)
+root = fresh_root(testCase);
+expectedHelper = string(fullfile(fileparts(fileparts(fileparts(mfilename('fullpath')))), ...
+    'matlab', 'find_stale_partial_siblings.m'));
+verifyEqual(testCase, string(which('find_stale_partial_siblings', '-all')), expectedHelper);
+outputRoot = fullfile(root, 'pristine-candidate-003');
+mkdir(fullfile(root, 'ordinary-sibling'));
+mkdir(fullfile(root, '.hidden-sibling'));
+mkdir(fullfile(root, 'pristine-candidate-003.partialish'));
+mkdir(fullfile(root, 'other.partial.1234'));
+write_bytes(fullfile(root, '.DS_Store'), uint8([0 1 2 255]));
+verifyEmpty(testCase, find_stale_partial_siblings(outputRoot));
+staleName = 'pristine-candidate-003.partial.01234567-89ab-cdef-0123-456789abcdef';
+mkdir(fullfile(root, staleName));
+verifyEqual(testCase, find_stale_partial_siblings(outputRoot), string(staleName));
+
+hiddenOutputRoot = fullfile(root, '.hidden-candidate');
+hiddenStaleName = '.hidden-candidate.partial.token';
+mkdir(fullfile(root, hiddenStaleName));
+verifyEqual(testCase, find_stale_partial_siblings(hiddenOutputRoot), string(hiddenStaleName));
+end
+
 function testReadOnlyInputTreeRemainsConsumable(testCase)
 container = [tempname ' read-only fixture'];
 input = fullfile(container, "input O'Brien"); output = fullfile(container, 'output');

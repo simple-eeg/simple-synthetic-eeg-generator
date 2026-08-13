@@ -60,6 +60,8 @@ assert(strcmp(version, EXPECTED_MATLAB_VERSION), 'MATLAB full version/build diff
 assert_unique_function_binding('shell_command', fullfile(scriptDir, 'shell_command.m'));
 assert_unique_function_binding('contains_ascii_case_insensitive_bytes', ...
     fullfile(scriptDir, 'contains_ascii_case_insensitive_bytes.m'));
+assert_unique_function_binding('find_stale_partial_siblings', ...
+    fullfile(scriptDir, 'find_stale_partial_siblings.m'));
 generatorHead = verify_clean_generator_checkout(generatorRoot);
 
 eeglabRoot = require_canonical_root('SIMPLE_SYNTH_EEGLAB_ROOT', true);
@@ -74,6 +76,7 @@ assert(strcmp(helperSha256, EXPECTED_EXCLUSIVE_RENAME_HELPER_SHA256), 'Exclusive
 require_tracked_clean_paths(generatorRoot, ...
     ["matlab/package_and_verify_eeglab.m"; "matlab/shell_command.m"; ...
      "matlab/contains_ascii_case_insensitive_bytes.m"; ...
+     "matlab/find_stale_partial_siblings.m"; ...
      "tools/exclusive_rename_macos.py"; ...
      "config/generator_settings.json"; "requirements/producing.lock"]);
 
@@ -246,12 +249,7 @@ assert(isfolder(pathValue) && ~path_is_symlink(pathValue), 'Exclusive partial di
 end
 
 function refuse_stale_partials(outputRoot)
-parent = string(fileparts(outputRoot));
-[~, name, ext] = fileparts(outputRoot);
-prefix = string([name ext '.partial.']);
-entries = dir(parent);
-names = string({entries.name});
-candidateNames = names(startsWith(names, prefix));
+candidateNames = find_stale_partial_siblings(outputRoot);
 assert(isempty(candidateNames), 'A stale sibling packaging partial exists; inspect it and stop.');
 end
 

@@ -77,6 +77,7 @@ verifyNotEmpty(testCase, strfind(source, 'require_tracked_clean_paths'));
 verifyNotEmpty(testCase, strfind(source, 'matlab/package_and_verify_eeglab.m'));
 verifyNotEmpty(testCase, strfind(source, 'matlab/shell_command.m'));
 verifyNotEmpty(testCase, strfind(source, 'matlab/contains_ascii_case_insensitive_bytes.m'));
+verifyNotEmpty(testCase, strfind(source, 'matlab/find_stale_partial_siblings.m'));
 verifyNotEmpty(testCase, strfind(source, 'tools/exclusive_rename_macos.py'));
 verifyEmpty(testCase, strfind(source, 'function command = shell_command'));
 verifyEmpty(testCase, strfind(source, 'contains(haystack'));
@@ -84,6 +85,11 @@ verifyNotEmpty(testCase, strfind(source, ...
     'assert_unique_function_binding(''shell_command'', fullfile(scriptDir, ''shell_command.m''))'));
 verifyNotEmpty(testCase, strfind(source, ...
     'assert_unique_function_binding(''contains_ascii_case_insensitive_bytes'''));
+verifyNotEmpty(testCase, strfind(source, ...
+    'assert_unique_function_binding(''find_stale_partial_siblings'''));
+verifyNotEmpty(testCase, strfind(source, ...
+    'candidateNames = find_stale_partial_siblings(outputRoot)'));
+verifyEmpty(testCase, strfind(source, 'string([name ext ''.partial.''])'));
 end
 
 function testInputRootHasOnlyReviewedReadUses(testCase)

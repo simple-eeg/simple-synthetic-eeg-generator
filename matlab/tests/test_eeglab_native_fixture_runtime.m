@@ -24,12 +24,34 @@ verifyEqual(testCase,numel(reloaded.event),1); verifyEqual(testCase,reloaded.eve
 verifyEqual(testCase,reloaded.event.latency,15001); verifyEmpty(testCase,reloaded.epoch);
 end
 
+function testProductionStyleStringComposedPathCrossesEEGLABAsChar(testCase)
+root = string(getenv('SIMPLE_SYNTH_EEGLAB_ROOT'));
+assumeTrue(testCase, strlength(root) > 0 && isfolder(root), 'Pinned EEGLAB root is not selected.');
+oldPath = path; testCase.addTeardown(@() path(oldPath));
+addpath(root); eeglab('nogui');
+container = string(tempname);
+partialRoot = container + ".partial." + string(java.util.UUID.randomUUID);
+rawDir = char(fullfile(partialRoot, 'data', 'raw', 'sub-001', 'ses-01', 'eeg'));
+verifyClass(testCase, partialRoot, 'string'); verifyClass(testCase, rawDir, 'char');
+verifyTrue(testCase, isrow(rawDir));
+mkdir(rawDir); testCase.addTeardown(@() safe_remove(char(partialRoot)));
+samples = single(reshape(cos((0:29999) ./ 41), 1, []));
+name = 'production_style_fixture.set';
+EEG = fixture_eeg(name, samples);
+EEG = eeg_checkset(EEG, 'eventconsistency');
+saved = pop_saveset(EEG, 'filename', name, 'filepath', rawDir, ...
+    'savemode', 'onefile', 'version', '6');
+verifyClass(testCase, saved.filepath, 'char');
+verifyEqual(testCase, saved.filepath, rawDir);
+reloaded = pop_loadset('filename', name, 'filepath', rawDir, 'loadmode', 'all');
+verifyEqual(testCase, reloaded.data, samples);
+verifyClass(testCase, reloaded.filepath, 'char');
+verifyEqual(testCase, reloaded.filepath, rawDir);
+verifyEmpty(testCase, dir(fullfile(rawDir, '*.fdt')));
+end
+
 function pathValue=save_sanitised_native(outputDir,name,samples,testCase)
-EEG=eeg_emptyset; EEG.setname='fixture'; EEG.filename=name; EEG.filepath=''; EEG.subject='001';
-EEG.nbchan=1; EEG.trials=1; EEG.pnts=30000; EEG.srate=1000; EEG.xmin=0; EEG.xmax=29.999;
-EEG.times=single((0:29999)); EEG.data=samples; EEG.chanlocs=struct('labels','Cz');
-EEG.event=struct('type','stimulus','latency',15001,'duration',0,'urevent',1);
-EEG.urevent=struct('type','stimulus','latency',15001,'duration',0);
+EEG=fixture_eeg(name,samples);
 EEG=eeg_checkset(EEG,'eventconsistency');
 pop_saveset(EEG,'filename',name,'filepath',outputDir,'savemode','onefile','version','6');
 pathValue=fullfile(outputDir,name); verifyTrue(testCase,isfile(pathValue));
@@ -38,6 +60,14 @@ before=load(pathValue,'-mat'); verifyFalse(testCase,isfield(before,'EEG')); veri
 after=before; after.filepath=''; save(pathValue,'-v6','-mat','-struct','after'); normalise_header(pathValue);
 stored=load(pathValue,'-mat'); before.filepath=''; verifyEqual(testCase,stored,before, ...
     'Native sanitisation must change only filepath.');
+end
+
+function EEG=fixture_eeg(name,samples)
+EEG=eeg_emptyset; EEG.setname='fixture'; EEG.filename=name; EEG.filepath=''; EEG.subject='001';
+EEG.nbchan=1; EEG.trials=1; EEG.pnts=30000; EEG.srate=1000; EEG.xmin=0; EEG.xmax=29.999;
+EEG.times=single((0:29999)); EEG.data=samples; EEG.chanlocs=struct('labels','Cz');
+EEG.event=struct('type','stimulus','latency',15001,'duration',0,'urevent',1);
+EEG.urevent=struct('type','stimulus','latency',15001,'duration',0);
 end
 
 function normalise_header(pathValue)

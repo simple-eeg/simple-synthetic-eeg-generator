@@ -17,6 +17,19 @@ required = {'eeg_emptyset','eeg_checkset','pop_saveset','savemode'', ''onefile',
 for i = 1:numel(required), verifyNotEmpty(testCase, strfind(source, required{i})); end
 end
 
+function testEEGLABPathArgumentsCrossAsChar(testCase)
+source = source_text;
+verifyNotEmpty(testCase, strfind(source, ...
+    "rawDir = char(fullfile(partialRoot, 'data', 'raw'"));
+verifyNotEmpty(testCase, strfind(source, ...
+    "ischar(rawDir) && isrow(rawDir) && ischar(setName) && isrow(setName)"));
+verifyNotEmpty(testCase, strfind(source, ...
+    "pop_saveset(EEG, 'filename', setName, 'filepath', rawDir"));
+verifyNotEmpty(testCase, strfind(source, ...
+    "pop_loadset('filename', setName, 'filepath', rawDir, 'loadmode', 'all')"));
+verifyEmpty(testCase, strfind(source, "'filepath', char(rawDir)"));
+end
+
 function testExactFiveEnvironmentVariables(testCase)
 source = source_text;
 names = regexp(source, 'SIMPLE_SYNTH_[A-Z_]+', 'match');

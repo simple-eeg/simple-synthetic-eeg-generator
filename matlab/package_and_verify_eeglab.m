@@ -127,9 +127,11 @@ for i = 1:31
     arrayName = sprintf('sub-%s_ses-01_run-01_eeg.f32le', subjectID);
     arrayPath = fullfile(inputRoot, 'staging', 'arrays', arrayName);
     samples = read_f32le_exact(arrayPath, EXPECTED_SAMPLE_COUNT);
-    rawDir = fullfile(partialRoot, 'data', 'raw', ['sub-' subjectID], 'ses-01', 'eeg');
+    rawDir = char(fullfile(partialRoot, 'data', 'raw', ['sub-' subjectID], 'ses-01', 'eeg'));
     mkdir(rawDir);
     setName = sprintf('sub-%s_ses-01_run-01_eeg.set', subjectID);
+    assert(ischar(rawDir) && isrow(rawDir) && ischar(setName) && isrow(setName), ...
+        'EEGLAB path and filename arguments must be character row vectors.');
 
     EEG = make_eeg(subjectID, setName, samples, EXPECTED_SAMPLE_COUNT, ...
         EXPECTED_RATE_HZ, EXPECTED_EVENT_LATENCY, receipt, EXPECTED_SETTINGS_SHA256);

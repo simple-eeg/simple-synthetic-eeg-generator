@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.coverage
+.pytest_cache/
+.ruff_cache/
+.venv/
+build/
+dist/
+
+# Generated EEG, workflow state, and local transaction artefacts never belong in Git.
+*.set
+*.fdt
+*.f32le
+*.mat
+*.log
+*.diary
+*.building/
+data/
+outputs/
+provenance/
+MANIFEST.sha256

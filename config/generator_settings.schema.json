@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://simple-eeg.example/schema/generator-settings-v1.json",
+  "title": "SIMPLE synthetic generator frozen settings",
+  "type": "object",
+  "additionalProperties": false,
+  "description": "Nested values are additionally bound byte-for-byte by the canonical SHA-256 enforced by settings.py.",
+  "required": ["schema", "build", "dataset", "environment", "provenance", "seed", "signal", "validation"],
+  "properties": {
+    "schema": {"const": "simple-synthetic-generator-settings-v1"},
+    "build": {"type": "object"},
+    "dataset": {"type": "object"},
+    "environment": {
+      "type": "object",
+      "required": ["simple_framework_commit"],
+      "properties": {
+        "simple_framework_commit": {"const": "2cb9227e75468e9393105e729b4ce590b76dab02"}
+      }
+    },
+    "provenance": {"type": "object"},
+    "seed": {"type": "object"},
+    "signal": {"type": "object"},
+    "validation": {"type": "object"}
+  }
+}

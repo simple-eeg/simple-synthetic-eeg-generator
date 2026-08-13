@@ -1,0 +1,158 @@
+{
+  "build": {
+    "canonical_fresh_process_runs": 2,
+    "final_path_must_be_absent": true,
+    "fresh_process_per_run": true,
+    "no_retry_after_failure": true,
+    "partial_sibling_pattern": "<output>.partial.<random>",
+    "runtime_input_allowlist": ["tracked frozen settings JSON", "tracked complete hash-pinned lock"],
+    "shuffled_order_fresh_process_runs": 1,
+    "successful_run_comparison": "byte-identical files and MANIFEST.sha256"
+  },
+  "dataset": {
+    "channel": "Cz",
+    "duration_seconds": 30.0,
+    "event_label": "stimulus",
+    "event_latency_eeglab": 15001,
+    "event_time_seconds": 15.0,
+    "reference_description": "synthetic common reference",
+    "run_id": "01",
+    "sample_count": 30000,
+    "sample_rate_hz": 1000.0,
+    "session_id": "01",
+    "subject_ids": [
+      "001", "002", "003", "004", "005", "006", "007", "008",
+      "009", "010", "011", "012", "013", "014", "015", "016",
+      "017", "018", "019", "020", "021", "022", "023", "024",
+      "025", "026", "027", "028", "029", "030", "031"
+    ]
+  },
+  "environment": {
+    "eeglab": "2026.0.0",
+    "matlab": "26.1.0.3312084 (R2026a) Update 4",
+    "matplotlib": "3.10.0",
+    "neurodsp": "2.3.0",
+    "numpy": "2.2.2",
+    "operating_system": "macOS 26.6.1",
+    "platform_machine": "arm64",
+    "python": "3.13.6",
+    "scipy": "1.15.1",
+    "simple_framework_commit": "2cb9227e75468e9393105e729b4ce590b76dab02",
+    "simple_commit": "c87ad575403336fe3bdea805fab0ebd28d77df1f"
+  },
+  "provenance": {
+    "array_byte_order": "little",
+    "array_dtype": "float32",
+    "csv_lineterminator": "\\n",
+    "json_encoding": "UTF-8",
+    "json_format": "sorted-keys-compact-final-newline",
+    "manifest_algorithm": "SHA-256"
+  },
+  "schema": "simple-synthetic-generator-settings-v1",
+  "seed": {
+    "derivation_domain": "simple-synthetic-eeg-generator/v1",
+    "digest": "SHA-256",
+    "master_decimal": 6001412985720209409,
+    "master_hex": "0x53494D504C450001",
+    "numpy_bit_generator": "PCG64DXSM"
+  },
+  "signal": {
+    "composition": {
+      "dtype": "float64",
+      "order": ["background_scaled", "early_negative", "late_positive", "spectral", "artifact"],
+      "staging_cast": "one final little-endian float32 cast"
+    },
+    "artifact": {
+      "amplitude_uv": 120.0,
+      "end_seconds": 0.5,
+      "frequency_hz": 20.0,
+      "phase_radians": 0.0,
+      "start_seconds": 0.3,
+      "subject_id": "031",
+      "support_endpoints_inclusive": true,
+      "tukey_alpha": 0.5,
+      "tukey_implementation": "scipy.signal.windows.tukey",
+      "tukey_sym": true
+    },
+    "background": {
+      "exponent": {"clip": [1.2, 1.8], "mean": 1.5, "sd": 0.15},
+      "sigma_uv": {"clip": [6.0, 10.0], "mean": 8.0, "sd": 1.0}
+    },
+    "response": {
+      "amplitude_multiplier": {"clip": [0.7, 1.3], "mean": 1.0, "sd": 0.15},
+      "delay_seconds": {"clip": [-0.05, 0.05], "mean": 0.0, "sd": 0.02},
+      "early": {"amplitude_uv": -5.0, "centre_seconds": 0.22, "width_seconds": 0.05},
+      "late": {"amplitude_uv": 8.0, "centre_seconds": 0.48, "width_seconds": 0.11},
+      "width_multiplier": {"clip": [0.8, 1.2], "mean": 1.0, "sd": 0.1}
+    },
+    "spectral": {
+      "amplitude_uv": {"clip": [1.5, 3.5], "mean": 2.5, "sd": 0.4},
+      "end_seconds": 0.85,
+      "frequency_hz": {"clip": [9.0, 11.0], "mean": 10.0, "sd": 0.5},
+      "phase_distribution": "uniform[0,2pi)",
+      "start_seconds": 0.15,
+      "support_endpoints_inclusive": true,
+      "tukey_alpha": 0.5,
+      "tukey_implementation": "scipy.signal.windows.tukey",
+      "tukey_sym": true
+    }
+  },
+  "validation": {
+    "analytic_component_atol_uv": 1e-12,
+    "artifact_min_absolute_uv": 80.0,
+    "artifact_min_next_largest_ratio": 2.0,
+    "background_mean_atol": 1e-12,
+    "background_psd": {
+      "detrend": "constant",
+      "frequency_hz": [2.0, 40.0],
+      "frequency_endpoints_inclusive": true,
+      "fit": "ordinary_least_squares",
+      "individual_slope_error_max": 0.3,
+      "logarithm": "log10",
+      "median_slope_error_max": 0.1,
+      "noverlap": 2048,
+      "nperseg": 4096,
+      "average": "mean",
+      "scaling": "density",
+      "window": "hann"
+    },
+    "background_sample_sd_atol": 1e-12,
+    "background_sample_sd_ddof": 1,
+    "group_response": {
+      "aggregation": "arithmetic_mean_of_per_subject_true_minus_reference",
+      "baseline_end_inclusive": false,
+      "baseline_window_seconds": [-0.2, 0.0],
+      "early_mean_difference_max_uv": -1.0,
+      "early_window_seconds": [0.17, 0.27],
+      "epoch_window_seconds": [-0.2, 1.0],
+      "late_mean_difference_min_uv": 2.0,
+      "late_window_seconds": [0.38, 0.58],
+      "ordinary_subject_count": 30,
+      "reference_event_time_seconds": 13.5,
+      "window_endpoints_inclusive": true
+    },
+    "ordinary_epoch_max_absolute_uv": 60.0,
+    "ordinary_whole_record_sd_ddof": 1,
+    "ordinary_whole_record_sd_ratio": [0.9, 1.1],
+    "mixed_signal_source": "staged_float32_promoted_to_float64",
+    "outlier_epoch": {
+      "endpoints_inclusive": true,
+      "statistic": "max_abs",
+      "window_seconds": [-0.2, 1.0]
+    },
+    "spectral_power": {
+      "band_hz": [9.0, 11.0],
+      "detrend": "constant",
+      "minimum_positive_pairs": 18,
+      "minimum_ratio_median": 1.1,
+      "nfft": 4096,
+      "pair_operation": "true_divided_by_reference",
+      "ratio_aggregation": "median",
+      "scaling": "density",
+      "window": "hann",
+      "window_endpoints_inclusive": true,
+      "window_seconds": [0.15, 0.85]
+    },
+    "support_atol_uv": 0.0
+  }
+}

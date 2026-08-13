@@ -1,0 +1,8 @@
+# Resolve on macOS 26.6.1 arm64 under CPython 3.13.6, then install only from
+# the reviewed hash-pinned lock. This input file is not an installation lock.
+matplotlib==3.10.0
+neurodsp==2.3.0
+numpy==2.2.2
+scipy==1.15.1
+setuptools==76.0.0
+wheel==0.45.1

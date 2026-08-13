@@ -1,0 +1,7 @@
+STOP: PUBLIC RELEASE IS NOT AUTHORISED BY THIS FILE.
+
+Before applying CC0 to a public release, the rights holder must confirm the
+legal and institutional authority to make the dedication. Record that check in
+the release evidence. If enforceable attribution is institutionally required,
+return to the already documented CC-BY-4.0 fallback decision; do not silently
+change this candidate.

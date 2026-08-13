@@ -57,6 +57,9 @@ assert(strcmp(scriptDir, fullfile(generatorRoot, 'matlab')), ...
 assert(strcmp(pwd, scriptDir), 'Run unchanged with MATLAB current folder = tracked matlab/.');
 assert(strcmp(version('-release'), EXPECTED_MATLAB_RELEASE), 'MATLAB release differs.');
 assert(strcmp(version, EXPECTED_MATLAB_VERSION), 'MATLAB full version/build differs.');
+assert_unique_function_binding('shell_command', fullfile(scriptDir, 'shell_command.m'));
+assert_unique_function_binding('contains_ascii_case_insensitive_bytes', ...
+    fullfile(scriptDir, 'contains_ascii_case_insensitive_bytes.m'));
 generatorHead = verify_clean_generator_checkout(generatorRoot);
 
 eeglabRoot = require_canonical_root('SIMPLE_SYNTH_EEGLAB_ROOT', true);
@@ -69,7 +72,9 @@ assert(isfile(helperPath) && ~path_is_symlink(helperPath), 'Tracked exclusive-re
 helperSha256 = sha256_file(helperPath);
 assert(strcmp(helperSha256, EXPECTED_EXCLUSIVE_RENAME_HELPER_SHA256), 'Exclusive-rename helper source hash differs.');
 require_tracked_clean_paths(generatorRoot, ...
-    ["matlab/package_and_verify_eeglab.m"; "tools/exclusive_rename_macos.py"; ...
+    ["matlab/package_and_verify_eeglab.m"; "matlab/shell_command.m"; ...
+     "matlab/contains_ascii_case_insensitive_bytes.m"; ...
+     "tools/exclusive_rename_macos.py"; ...
      "config/generator_settings.json"; "requirements/producing.lock"]);
 
 inputRoot = require_canonical_root('SIMPLE_SYNTH_INPUT_ROOT', true);
@@ -215,6 +220,12 @@ jpath = java.nio.file.Paths.get(char(pathValue), javaArray('java.lang.String', 0
 tf = java.nio.file.Files.isSymbolicLink(jpath);
 end
 
+function assert_unique_function_binding(name, expectedPath)
+locations = string(which(name, '-all'));
+assert(isscalar(locations) && strcmp(locations, expectedPath), ...
+    'Production helper must resolve uniquely to its exact tracked path: %s', name);
+end
+
 function tf = path_exists_including_symlink(pathValue)
 jpath = java.nio.file.Paths.get(char(pathValue), javaArray('java.lang.String', 0));
 options = javaArray('java.nio.file.LinkOption', 1);
@@ -318,16 +329,6 @@ for i = 1:numel(identity.packages)
     actualPackages(i,:) = reshape(pair, 1, 2);
 end
 assert(isequal(actualPackages, string(expectedPackages)), 'Installed Python package names/versions differ from the exact lock.');
-end
-
-function command = shell_command(executable, arguments)
-pieces = [shell_quote(executable), arrayfun(@shell_quote, string(arguments))];
-command = char(join(pieces, ' '));
-end
-
-function quoted = shell_quote(value)
-value = string(value);
-quoted = "'" + replace(value, "'", "'\"'\"'") + "'";
 end
 
 function exclusive_atomic_move(source, destination, pythonPath, helperPath)
@@ -528,16 +529,13 @@ end
 function audit_raw_mat_bytes(pathValue, tokens)
 fid = fopen(pathValue, 'r', 'ieee-le'); assert(fid >= 0, 'Cannot scan MAT bytes.');
 cleanup = onCleanup(@() fclose(fid));
-bytes = fread(fid, Inf, '*uint8')'; haystack = ascii_lower(bytes);
+bytes = fread(fid, Inf, '*uint8')';
 tokens = unique(["petal","noci-prem","patient","participant","hospital",tokens(:)']);
 for k = 1:numel(tokens)
     if strlength(tokens(k)) == 0, continue; end
-    assert(~contains(haystack, ascii_lower(uint8(char(tokens(k))))), 'Serialized MAT bytes contain forbidden text.');
+    assert(~contains_ascii_case_insensitive_bytes(bytes, uint8(char(tokens(k)))), ...
+        'Serialized MAT bytes contain forbidden text.');
 end
-end
-
-function output = ascii_lower(input)
-output = input; mask = output >= uint8('A') & output <= uint8('Z'); output(mask) = output(mask) + 32;
 end
 
 function write_roundtrip_csv(pathValue, rows)

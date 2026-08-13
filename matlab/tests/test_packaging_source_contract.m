@@ -75,7 +75,39 @@ verifyEmpty(testCase, strfind(source, 'EXPECTED_GENERATOR_COMMIT'));
 verifyNotEmpty(testCase, strfind(source, 'strcmp(receipt.generator_commit, generatorHead)'));
 verifyNotEmpty(testCase, strfind(source, 'require_tracked_clean_paths'));
 verifyNotEmpty(testCase, strfind(source, 'matlab/package_and_verify_eeglab.m'));
+verifyNotEmpty(testCase, strfind(source, 'matlab/shell_command.m'));
+verifyNotEmpty(testCase, strfind(source, 'matlab/contains_ascii_case_insensitive_bytes.m'));
 verifyNotEmpty(testCase, strfind(source, 'tools/exclusive_rename_macos.py'));
+verifyEmpty(testCase, strfind(source, 'function command = shell_command'));
+verifyEmpty(testCase, strfind(source, 'contains(haystack'));
+verifyNotEmpty(testCase, strfind(source, ...
+    'assert_unique_function_binding(''shell_command'', fullfile(scriptDir, ''shell_command.m''))'));
+verifyNotEmpty(testCase, strfind(source, ...
+    'assert_unique_function_binding(''contains_ascii_case_insensitive_bytes'''));
+end
+
+function testInputRootHasOnlyReviewedReadUses(testCase)
+source = source_text;
+lines = splitlines(string(source));
+actual = strtrim(lines(contains(lines, 'inputRoot')));
+expected = [
+    "inputRoot = require_canonical_root('SIMPLE_SYNTH_INPUT_ROOT', true);"
+    "assert(~strcmp(inputRoot, outputParent) && ~startsWith(outputParent + filesep, inputRoot + filesep), ..."
+    "verify_sha256_manifest(inputRoot);"
+    "settingsPath = fullfile(inputRoot, 'provenance', 'generator_settings.json');"
+    "receiptPath = fullfile(inputRoot, 'provenance', 'build_receipt.json');"
+    "reproducibility = jsondecode(fileread(fullfile(inputRoot, 'provenance', 'reproducibility_receipt.json')));"
+    "datasetList = read_dataset_list(fullfile(inputRoot, 'data_lists', 'dataset_list.csv'), EXPECTED_SUBJECTS);"
+    "copy_bundle_scaffold(inputRoot, partialRoot);"
+    "pathAuditTokens = unique([inputRoot; partialRoot; outputRoot; outputParent; generatorRoot; ..."
+    "arrayPath = fullfile(inputRoot, 'staging', 'arrays', arrayName);"
+    "function copy_bundle_scaffold(inputRoot, partialRoot)"
+    "for i = 1:numel(names), copyfile(fullfile(inputRoot, 'dataset_assets', names{i}), fullfile(partialRoot, targets{i})); end"
+    "for i = 1:numel(names), copyfile(fullfile(inputRoot, 'provenance', names{i}), fullfile(partialRoot, 'provenance', names{i})); end"
+    "copyfile(fullfile(inputRoot, 'data_lists', 'dataset_list.csv'), fullfile(partialRoot, 'data_lists', 'dataset_list.csv'));"
+    ];
+verifyEqual(testCase, sort(actual), sort(expected), ...
+    'Every inputRoot use must remain an explicitly reviewed read/source operation.');
 end
 
 function testCanonicalSettingsHashNotPrettySourceHash(testCase)
@@ -98,7 +130,9 @@ assert(strlength(python) > 0, ...
     'Set SIMPLE_SYNTH_PYTHON to the exact reviewed interpreter for this test.');
 config = fullfile(root, 'config', 'generator_settings.json');
 code = 'import json,sys;print(json.dumps(json.load(open(sys.argv[1])),sort_keys=True,separators=(chr(44),chr(58))))';
-command = sprintf('''%s'' -I -c ''%s'' ''%s''', python, code, config);
+matlabDir = fullfile(root, 'matlab');
+addpath(matlabDir); cleanup = onCleanup(@() rmpath(matlabDir)); %#ok<NASGU>
+command = shell_command(python, ["-I", "-c", string(code), string(config)]);
 [status, text] = system(command); assert(status == 0);
 end
 

@@ -3,6 +3,13 @@ function tests = test_packaging_helpers_runtime
 tests = functiontests(localfunctions);
 end
 
+function setupOnce(testCase)
+root = fileparts(fileparts(fileparts(mfilename('fullpath'))));
+matlabDir = fullfile(root, 'matlab');
+addpath(matlabDir);
+testCase.addTeardown(@() rmpath(matlabDir));
+end
+
 function testCanonicalHeaderMakesEquivalentSavesByteIdentical(testCase)
 root = fresh_root(testCase);
 left = fullfile(root, 'left.set'); right = fullfile(root, 'right.set');
@@ -45,6 +52,30 @@ listed = ["data/raw/a.set";"data/raw/b.set"];
 verifyTrue(testCase, isequal(sort(listed), sort(["data/raw/b.set";"data/raw/a.set"])));
 verifyFalse(testCase, isequal(sort(listed), sort(["data/raw/a.set";"data/raw/c.set"])));
 verifyEqual(testCase, numel(unique(listed)), 2);
+end
+
+function testReadOnlyInputTreeRemainsConsumable(testCase)
+container = [tempname ' read-only fixture'];
+input = fullfile(container, "input O'Brien"); output = fullfile(container, 'output');
+mkdir(input); mkdir(output); testCase.addTeardown(@() safe_remove_readonly(container));
+write_bytes(fullfile(input, 'note.txt'), unicode2native(sprintf('synthetic-only\n'), 'UTF-8'));
+write_bytes(fullfile(input, 'array.f32le'), typecast(single([1 -2 3.5]), 'uint8'));
+write_bytes(fullfile(input, 'list.csv'), unicode2native(sprintf('subjectID,value\n001,ok\n'), 'UTF-8'));
+before = recursive_files(input, input);
+[status, diagnostic] = system(shell_command('/bin/chmod', ["-R", "a-w", string(input)]));
+assert(status == 0, 'Cannot make isolated input fixture read-only: %s', diagnostic);
+[status, ~] = system(shell_command('/bin/test', ["!", "-w", string(input)]));
+verifyEqual(testCase, status, 0, 'Isolated input fixture did not become read-only.');
+verifyEqual(testCase, fileread(fullfile(input, 'note.txt')), sprintf('synthetic-only\n'));
+fid = fopen(fullfile(input, 'array.f32le'), 'r', 'ieee-le');
+assert(fid >= 0); cleanup = onCleanup(@() fclose(fid)); %#ok<NASGU>
+verifyEqual(testCase, fread(fid, Inf, '*single').', single([1 -2 3.5]));
+tableValue = readtable(fullfile(input, 'list.csv'), 'TextType', 'string');
+verifyEqual(testCase, string(tableValue.value), "ok");
+copyfile(fullfile(input, 'note.txt'), fullfile(output, 'note.txt'));
+verifyEqual(testCase, fileread(fullfile(output, 'note.txt')), sprintf('synthetic-only\n'));
+verifyEqual(testCase, recursive_files(input, input), before, ...
+    'Reading and copying from a read-only input tree must not add or change its inventory.');
 end
 
 function root = fresh_root(testCase)
@@ -100,4 +131,11 @@ end
 
 function safe_remove(root)
 if isfolder(root), rmdir(root, 's'); end
+end
+
+function safe_remove_readonly(root)
+if isfolder(root)
+    system(shell_command('/bin/chmod', ["-R", "u+w", string(root)]));
+    rmdir(root, 's');
+end
 end

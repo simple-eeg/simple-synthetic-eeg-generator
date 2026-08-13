@@ -24,6 +24,11 @@ verifyEqual(testCase, sort(unique(names)), sort({'SIMPLE_SYNTH_EEGLAB_ROOT', ...
     'SIMPLE_SYNTH_GENERATOR_ROOT','SIMPLE_SYNTH_INPUT_ROOT','SIMPLE_SYNTH_OUTPUT_ROOT','SIMPLE_SYNTH_PYTHON'}));
 end
 
+function testProducingMatlabIdentityMatchesRuntime(testCase)
+verifyEqual(testCase, version('-release'), '2026a');
+verifyEqual(testCase, version, '26.1.0.3312084 (R2026a) Update 4');
+end
+
 function testPinnedEEGLABSourcesAndPythonBoundary(testCase)
 source = source_text;
 verifyEqual(testCase, numel(regexp(source, '''[0-9a-f]{64}''', 'match')), 10);
@@ -61,6 +66,7 @@ end
 
 function testCheckpointConstantsAreFrozen(testCase)
 source = source_text;
+verifyNotEmpty(testCase, strfind(source, 'EXPECTED_MATLAB_RELEASE = ''2026a'''));
 verifyNotEmpty(testCase, strfind(source, 'EXPECTED_FRAMEWORK_COMMIT = ''2cb9227e75468e9393105e729b4ce590b76dab02'''));
 verifyNotEmpty(testCase, strfind(source, 'EXPECTED_EXCLUSIVE_RENAME_HELPER_SHA256 = ''e2c5d209c1034cb52fc8eb79fef3ca3722575e52b243cffdc9a5b46cbf76fc11'''));
 verifyNotEmpty(testCase, strfind(source, 'EXPECTED_SETTINGS_SHA256 = ''9be35cfedf7aa42edc43c6032c75b709c838fb5582fc9ced39bd8ef832424ded'''));

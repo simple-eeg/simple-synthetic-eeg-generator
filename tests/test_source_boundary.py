@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -79,12 +80,54 @@ class SourceBoundaryTests(unittest.TestCase):
                 or ".venv" in path.parts
                 or ".git" in path.parts
                 or "__pycache__" in path.parts
-                or (path.suffix.lower() not in text_suffixes and path.name not in {".gitignore", "LICENSE"})
+                or (
+                    path.suffix.lower() not in text_suffixes
+                    and path.name not in {".gitignore", "LICENSE", "generate_dataset"}
+                )
             ):
                 continue
             text = path.read_text(encoding="utf-8")
             self.assertNotIn("/" + "Users" + "/", text, str(path))
             self.assertNotIn("/" + "Volumes" + "/", text, str(path))
+
+    def test_human_entrypoint_is_one_choice_and_never_names_framework_location(self) -> None:
+        launcher = (ROOT / "generate_dataset").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        workflow = (ROOT / "src/simple_synthetic_eeg_generator/user_workflow.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("./generate_dataset <existing-parent-directory>", readme)
+        self.assertIn("simple-synthetic-eeg-demo", workflow)
+        self.assertNotIn("simple-framework/data", workflow)
+        self.assertNotIn("simple-framework/data", launcher)
+
+    def test_native_prerequisite_preflight_is_fixed_and_nonproducing(self) -> None:
+        source = (ROOT / "matlab/preflight_environment.m").read_text(encoding="utf-8")
+        for required in (
+            "26.1.0.3312084 (R2026a) Update 4",
+            "2026.0.0",
+            "restoredefaultpath",
+            "eeglab('nogui')",
+            "EXPECTED_EEGLAB_FILES",
+        ):
+            self.assertIn(required, source)
+        for forbidden in ("pop_saveset(", "pop_loadset(", "fopen(pathValue, 'w", "mkdir(", "copyfile("):
+            self.assertNotIn(forbidden, source)
+
+    def test_preflight_and_packager_share_exact_eeglab_hash_constants(self) -> None:
+        preflight = (ROOT / "matlab/preflight_environment.m").read_text(encoding="utf-8")
+        packager = (ROOT / "matlab/package_and_verify_eeglab.m").read_text(encoding="utf-8")
+        pattern = re.compile(r"'([^']+\.m)', '([0-9a-f]{64})'")
+        preflight_hashes = dict(pattern.findall(preflight))
+        packager_hashes = dict(pattern.findall(packager))
+        self.assertEqual(len(preflight_hashes), 6)
+        self.assertEqual(preflight_hashes, packager_hashes)
+
+    def test_validation_sources_make_no_preregistration_overclaim(self) -> None:
+        texts = [(ROOT / "README.md").read_text(encoding="utf-8")]
+        texts.extend(path.read_text(encoding="utf-8") for path in (ROOT / "src").rglob("*.py"))
+        self.assertNotRegex("\n".join(texts).lower(), r"pre-?regist")
+        self.assertIn("fixed before candidate results were inspected", texts[0])
 
     def test_name_only_audit_rejects_ignored_eeg_and_output_without_reading_contents(self) -> None:
         for relative in ("ignored.set", "outputs/report.txt"):

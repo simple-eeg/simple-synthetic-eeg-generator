@@ -14,7 +14,7 @@
       "type": "object",
       "required": ["simple_framework_commit"],
       "properties": {
-        "simple_framework_commit": {"const": "2cb9227e75468e9393105e729b4ce590b76dab02"}
+        "simple_framework_commit": {"const": "4907ad49a55e3dec22a74a0a13acdddd63bcddf7"}
       }
     },
     "provenance": {"type": "object"},

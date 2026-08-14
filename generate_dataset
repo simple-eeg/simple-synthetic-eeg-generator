@@ -1,0 +1,14 @@
+#!/bin/sh
+# One-choice launcher for the fixed SIMPLE synthetic demonstration dataset.
+# Run as: ./generate_dataset <existing-parent-directory>
+
+set -eu
+
+generator_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+generator_python="$generator_root/.venv/bin/python"
+if [ ! -x "$generator_python" ]; then
+    echo "generator environment is missing; create .venv as described in README.md" >&2
+    exit 2
+fi
+exec "$generator_python" -u -I \
+    "$generator_root/tools/run_dataset_generator.py" "$@"

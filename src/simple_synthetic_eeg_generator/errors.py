@@ -14,7 +14,7 @@ class EnvironmentLockError(GeneratorError):
 
 
 class ValidationError(GeneratorError):
-    """A preregistered candidate gate failed."""
+    """A predeclared candidate-independent gate failed."""
 
 
 class TransactionError(GeneratorError):

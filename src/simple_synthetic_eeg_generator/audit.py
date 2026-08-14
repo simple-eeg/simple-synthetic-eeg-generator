@@ -32,6 +32,7 @@ ALLOWED_IMPORT_ROOTS = {
     "platform",
     "re",
     "secrets",
+    "signal",
     "shutil",
     "subprocess",
     "sys",
@@ -51,7 +52,7 @@ ALLOWED_UNTRACKED_ROOTS = {".venv"}
 ALLOWED_IGNORED_CACHE_COMPONENTS = {"__pycache__", ".pytest_cache", ".ruff_cache"}
 FORBIDDEN_OUTPUT_COMPONENTS = {"data", "outputs", "provenance", "build", "dist"}
 ALLOWED_SUFFIXES = {".cff", ".in", ".json", ".lock", ".m", ".md", ".py", ".toml", ".txt", ".yaml", ".yml"}
-SPECIAL_NAMES = {".gitignore", "LICENSE"}
+SPECIAL_NAMES = {".gitignore", "LICENSE", "generate_dataset"}
 FORBIDDEN_SOURCE_PATH_TEXT = (
     "/" + "Users" + "/",
     "/" + "Volumes" + "/",

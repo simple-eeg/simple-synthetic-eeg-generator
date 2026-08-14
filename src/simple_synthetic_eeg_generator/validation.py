@@ -1,4 +1,4 @@
-"""Preregistered, candidate-independent generator validation gates."""
+"""Prospectively frozen, candidate-independent generator validation gates."""
 
 from __future__ import annotations
 
@@ -129,7 +129,7 @@ def validate_subject(result: SubjectResult, settings: dict[str, Any]) -> dict[st
     slope_error = abs(slope + result.parameters["chi"].realised)
     _fail(
         slope_error <= float(psd_gate["individual_slope_error_max"]),
-        f"Subject {result.subject_id} background slope error exceeded preregistered maximum",
+        f"Subject {result.subject_id} background slope error exceeded the predeclared maximum",
     )
 
     realised = {name: draw.realised for name, draw in result.parameters.items()}
@@ -268,7 +268,7 @@ def validate_cohort(results: Iterable[SubjectResult], settings: dict[str, Any]) 
     _fail(artifact_max >= float(gates["artifact_min_absolute_uv"]), "Subject 31 artefact amplitude gate failed")
     _fail(
         next_largest <= float(gates["ordinary_epoch_max_absolute_uv"]),
-        "An ordinary true/reference epoch exceeded the preregistered maximum",
+        "An ordinary true/reference epoch exceeded the predeclared maximum",
     )
     _fail(
         artifact_max >= float(gates["artifact_min_next_largest_ratio"]) * next_largest,

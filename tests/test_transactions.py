@@ -48,7 +48,7 @@ class TransactionBoundaryTests(unittest.TestCase):
                 self.assertTrue(Path(environment[name]).is_dir())
 
     def test_framework_commit_literal_is_exact(self) -> None:
-        self.assertEqual(SIMPLE_FRAMEWORK_COMMIT, "2cb9227e75468e9393105e729b4ce590b76dab02")
+        self.assertEqual(SIMPLE_FRAMEWORK_COMMIT, "4907ad49a55e3dec22a74a0a13acdddd63bcddf7")
 
     def test_worker_diagnostic_is_bounded_and_removes_private_paths(self) -> None:
         root = Path("/private/tmp/audited-generator")

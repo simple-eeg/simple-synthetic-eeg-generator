@@ -80,9 +80,9 @@ end
 function testCheckpointConstantsAreFrozen(testCase)
 source = source_text;
 verifyNotEmpty(testCase, strfind(source, 'EXPECTED_MATLAB_RELEASE = ''2026a'''));
-verifyNotEmpty(testCase, strfind(source, 'EXPECTED_FRAMEWORK_COMMIT = ''2cb9227e75468e9393105e729b4ce590b76dab02'''));
+verifyNotEmpty(testCase, strfind(source, 'EXPECTED_FRAMEWORK_COMMIT = ''4907ad49a55e3dec22a74a0a13acdddd63bcddf7'''));
 verifyNotEmpty(testCase, strfind(source, 'EXPECTED_EXCLUSIVE_RENAME_HELPER_SHA256 = ''e2c5d209c1034cb52fc8eb79fef3ca3722575e52b243cffdc9a5b46cbf76fc11'''));
-verifyNotEmpty(testCase, strfind(source, 'EXPECTED_SETTINGS_SHA256 = ''9be35cfedf7aa42edc43c6032c75b709c838fb5582fc9ced39bd8ef832424ded'''));
+verifyNotEmpty(testCase, strfind(source, 'EXPECTED_SETTINGS_SHA256 = ''7c76309cd16bfb72440594512fd27fcd511d7f7435c19e0b764456fad8198607'''));
 verifyEmpty(testCase, strfind(source, '__FREEZE_'));
 verifyEmpty(testCase, strfind(source, 'EXPECTED_GENERATOR_COMMIT'));
 verifyNotEmpty(testCase, strfind(source, 'strcmp(receipt.generator_commit, generatorHead)'));
@@ -135,7 +135,7 @@ pretty = fileread(fullfile(root, 'config', 'generator_settings.json'));
 jsondecode(pretty); % prove the pretty source remains valid JSON
 canonical = canonical_json;
 verifyNotEqual(testCase, sha256_text(pretty), sha256_text(canonical));
-verifyEqual(testCase, sha256_text(canonical), '9be35cfedf7aa42edc43c6032c75b709c838fb5582fc9ced39bd8ef832424ded');
+verifyEqual(testCase, sha256_text(canonical), '7c76309cd16bfb72440594512fd27fcd511d7f7435c19e0b764456fad8198607');
 source = source_text;
 verifyNotEmpty(testCase, strfind(source, 'sha256_file(settingsPath), EXPECTED_SETTINGS_SHA256'));
 end

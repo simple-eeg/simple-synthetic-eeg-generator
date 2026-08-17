@@ -54,8 +54,8 @@ The CSV deliberately stores framework-relative `data/raw/...` paths. Those
 paths become valid after the manual copy. Do not commit the generated inputs
 to the framework repository.
 
-The frozen compatible framework source checkpoint is
-`4907ad49a55e3dec22a74a0a13acdddd63bcddf7`.
+The generated metadata records the required framework source commit:
+`7fd6837587753ee8db4bf81bba238d0a3ffd44b8`.
 
 ## One-time prerequisites
 
@@ -90,7 +90,7 @@ the Python, MATLAB or EEGLAB installation.
 
 ## What the one command does internally
 
-The simple entry point retains the full fail-closed production process:
+The entry point runs the full fail-closed production process:
 
 1. audits the clean Git checkout, frozen settings and dependency lock, then
    preflights the exact native MATLAB/EEGLAB runtime;
@@ -109,7 +109,7 @@ Internal array stages, manifests, receipts, parameter tables and packaging
 scaffolds are validation machinery, not user outputs. They use unique hidden
 siblings and are removed before success. The durable scientific recipe and
 rights/citation records remain versioned in this repository, while each `.set`
-embeds its synthetic identity and source checkpoint metadata.
+embeds its synthetic identity and source-commit metadata.
 
 Low-level Python and MATLAB entry points remain available to maintainers for
 testing and auditing, but they are not the normal user interface.

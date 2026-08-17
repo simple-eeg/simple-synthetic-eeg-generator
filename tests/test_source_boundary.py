@@ -70,7 +70,22 @@ class SourceBoundaryTests(unittest.TestCase):
                 env=environment,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(result.stdout.strip(), "valid simple-synthetic-generator-settings-v1")
+            self.assertEqual(result.stdout.strip(), "valid simple-synthetic-generator-settings-v2")
+
+    def test_tracked_repository_contains_no_generated_eeg_files(self) -> None:
+        tracked = subprocess.run(
+            ["git", "ls-files", "-z"],
+            cwd=ROOT,
+            check=True,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+        ).stdout.split(b"\0")
+        generated_suffixes = {".set", ".fdt", ".f32le", ".mat", ".log", ".diary"}
+        for raw_relative in tracked:
+            if not raw_relative:
+                continue
+            relative = Path(raw_relative.decode("utf-8"))
+            self.assertNotIn(relative.suffix.lower(), generated_suffixes, str(relative))
 
     def test_no_personal_or_server_paths_in_any_tracked_text(self) -> None:
         text_suffixes = {".cff", ".in", ".json", ".lock", ".m", ".md", ".py", ".toml", ".txt", ".yaml", ".yml"}

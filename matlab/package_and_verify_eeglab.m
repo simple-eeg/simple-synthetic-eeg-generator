@@ -19,16 +19,15 @@ EXPECTED_MATLAB_RELEASE = '2026a';
 EXPECTED_MATLAB_VERSION = '26.1.0.3312084 (R2026a) Update 4';
 EXPECTED_EEGLAB_VERSION = '2026.0.0';
 EXPECTED_SUBJECTS = compose('%03d', (1:31)');
-EXPECTED_INPUT_SCHEMA = 'simple-synthetic-array-stage-receipt-v1';
+EXPECTED_INPUT_SCHEMA = 'simple-synthetic-array-stage-receipt-v2';
 EXPECTED_SAMPLE_COUNT = 30000;
 EXPECTED_RATE_HZ = 1000;
 EXPECTED_EVENT_LATENCY = 15001;
-% Update once, immediately before the generator source checkpoint, from the
+% Update once, immediately before the generator source commit, from the
 % exact final tracked canonical settings bytes. Never derive this at runtime.
-EXPECTED_SETTINGS_SHA256 = '7c76309cd16bfb72440594512fd27fcd511d7f7435c19e0b764456fad8198607';
-EXPECTED_SIMPLE_COMMIT = 'c87ad575403336fe3bdea805fab0ebd28d77df1f';
-EXPECTED_FRAMEWORK_COMMIT = '4907ad49a55e3dec22a74a0a13acdddd63bcddf7';
-EXPECTED_EXCLUSIVE_RENAME_HELPER_SHA256 = 'e2c5d209c1034cb52fc8eb79fef3ca3722575e52b243cffdc9a5b46cbf76fc11';
+EXPECTED_SETTINGS_SHA256 = '881690e410e0b74a78430becd842f248f4564cd45dc102d838c08d810ad6bbc3';
+EXPECTED_FRAMEWORK_COMMIT = '7fd6837587753ee8db4bf81bba238d0a3ffd44b8';
+EXPECTED_EXCLUSIVE_RENAME_HELPER_SHA256 = '5340a2ba3f408aa86f97309ad89daa1b52fe4a0e144cf4cb6a9ce0c7dc273a54';
 EXPECTED_PYTHON_VERSION = '3.13.6';
 EXPECTED_PYTHON_LINK_TEXT = 'python3.13';
 EXPECTED_PYTHON313_LINK_TEXT = '/opt/homebrew/opt/python@3.13/bin/python3.13';
@@ -101,10 +100,14 @@ assert(strcmp(sha256_file(settingsPath), EXPECTED_SETTINGS_SHA256), 'Frozen sett
 settings = jsondecode(fileread(settingsPath));
 receipt = jsondecode(fileread(receiptPath));
 reproducibility = jsondecode(fileread(fullfile(inputRoot, 'provenance', 'reproducibility_receipt.json')));
+assert_exact_fields(receipt, ["schema"; "status"; "generator_commit"; "framework_commit"; ...
+    "environment"; "static_audit"; "executing_generator_module_origins"; ...
+    "subject_count"; "sample_count_per_subject"; "array_encoding"; ...
+    "contains_real_data"; "contains_screening_decisions"; "build_variant"], ...
+    'Input array-stage receipt');
 assert(strcmp(receipt.schema, EXPECTED_INPUT_SCHEMA) && strcmp(receipt.status, 'passed'), 'Input receipt is not accepted.');
 assert(strcmp(receipt.generator_commit, generatorHead), 'Array stage was not produced by this exact clean generator checkout.');
-assert(strcmp(receipt.framework_commit, EXPECTED_FRAMEWORK_COMMIT), 'Framework source checkpoint differs.');
-assert(strcmp(receipt.simple_commit, EXPECTED_SIMPLE_COMMIT), 'SIMPLE source checkpoint differs.');
+assert(strcmp(receipt.framework_commit, EXPECTED_FRAMEWORK_COMMIT), 'Required framework source commit differs.');
 assert(strcmp(reproducibility.schema, 'simple-synthetic-reproducibility-v1') && ...
     strcmp(reproducibility.status, 'passed') && reproducibility.fresh_process_count == 3 && ...
     reproducibility.canonical_process_count == 2 && reproducibility.shuffled_process_count == 1, ...
@@ -349,9 +352,9 @@ EEG.times = single((0:(sampleCount - 1)) ./ rateHz .* 1000); EEG.data = reshape(
 EEG.chanlocs = struct('labels', 'Cz', 'type', 'synthetic', 'ref', 'synthetic common reference');
 EEG.event = struct('type', 'stimulus', 'latency', eventLatency, 'duration', 0, 'urevent', 1);
 EEG.urevent = struct('type', 'stimulus', 'latency', eventLatency, 'duration', 0);
-EEG.etc.simple_synthetic = struct('schema', 'simple-synthetic-eeglab-metadata-v1', ...
+EEG.etc.simple_synthetic = struct('schema', 'simple-synthetic-eeglab-metadata-v2', ...
     'wholly_synthetic', true, 'generator_commit', receipt.generator_commit, ...
-    'framework_commit', receipt.framework_commit, 'simple_commit', receipt.simple_commit, ...
+    'framework_commit', receipt.framework_commit, ...
     'settings_sha256', settingsDigest, 'subjectID', subjectID, 'sessionID', '01', 'runID', '01');
 end
 
@@ -545,14 +548,20 @@ write_text_exclusive(pathValue, join(lines + newline, ''));
 end
 
 function write_packaging_receipt(pathValue, inputReceipt, settingsDigest, helperDigest, pythonDigest, lockDigest)
-receipt = struct('schema', 'simple-synthetic-eeglab-packaging-v1', 'status', 'passed', ...
+receipt = struct('schema', 'simple-synthetic-eeglab-packaging-v2', 'status', 'passed', ...
     'matlab_release', version('-release'), 'matlab_version', version, 'eeglab_version', char(eeg_getversion), ...
     'set_count', 31, 'fdt_count', 0, 'settings_sha256', settingsDigest, ...
     'generator_commit', inputReceipt.generator_commit, 'framework_commit', inputReceipt.framework_commit, ...
-    'simple_commit', inputReceipt.simple_commit, 'exclusive_rename_helper_sha256', helperDigest, ...
+    'exclusive_rename_helper_sha256', helperDigest, ...
     'python_executable_role', '.venv/bin/python', 'python_target_sha256', pythonDigest, ...
     'python_lock_sha256', lockDigest);
 write_text_exclusive(pathValue, string(jsonencode(receipt)) + newline);
+end
+
+function assert_exact_fields(value, expected, label)
+actual = sort(string(fieldnames(value)));
+expected = sort(string(expected(:)));
+assert(isequal(actual, expected), '%s fields differ from the accepted schema.', label);
 end
 
 function write_text_exclusive(pathValue, text)

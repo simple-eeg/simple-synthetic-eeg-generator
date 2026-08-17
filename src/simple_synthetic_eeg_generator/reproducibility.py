@@ -155,7 +155,7 @@ def generate_reproducibly(
     interpreter = validate_producing_interpreter(source_root)
     if framework_commit != SIMPLE_FRAMEWORK_COMMIT:
         raise TransactionError(
-            f"Framework commit must equal frozen checkpoint {SIMPLE_FRAMEWORK_COMMIT}"
+            f"Framework commit must equal required source commit {SIMPLE_FRAMEWORK_COMMIT}"
         )
     refuse_stale_partials(output)
     token = secrets.token_hex(12)

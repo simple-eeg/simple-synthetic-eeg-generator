@@ -106,6 +106,39 @@ class FrozenContractTests(unittest.TestCase):
             settings.values["environment"]["simple_framework_commit"],
             SIMPLE_FRAMEWORK_COMMIT,
         )
+        self.assertEqual(
+            set(settings.values["environment"]),
+            {
+                "eeglab",
+                "matlab",
+                "matplotlib",
+                "neurodsp",
+                "numpy",
+                "operating_system",
+                "platform_machine",
+                "python",
+                "scipy",
+                "simple_framework_commit",
+            },
+        )
+
+    def test_unexpected_environment_identity_is_rejected(self) -> None:
+        values = json.loads(SETTINGS.read_text(encoding="utf-8"))
+        values["environment"]["unexpected_repository_commit"] = "0" * 40
+        with self.assertRaises(ContractError):
+            validate_frozen_settings(values)
+
+    def test_settings_schema_has_one_exact_environment_shape(self) -> None:
+        schema = json.loads(
+            (ROOT / "config/generator_settings.schema.json").read_text(encoding="utf-8")
+        )
+        environment = schema["properties"]["environment"]
+        self.assertFalse(environment["additionalProperties"])
+        self.assertEqual(set(environment["required"]), set(environment["properties"]))
+        self.assertEqual(
+            set(environment["properties"]),
+            set(load_settings(SETTINGS).values["environment"]),
+        )
 
     def test_any_nested_settings_change_is_rejected_by_digest(self) -> None:
         values = json.loads(SETTINGS.read_text(encoding="utf-8"))

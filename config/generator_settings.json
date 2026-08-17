@@ -37,8 +37,7 @@
     "platform_machine": "arm64",
     "python": "3.13.6",
     "scipy": "1.15.1",
-    "simple_framework_commit": "4907ad49a55e3dec22a74a0a13acdddd63bcddf7",
-    "simple_commit": "c87ad575403336fe3bdea805fab0ebd28d77df1f"
+    "simple_framework_commit": "7fd6837587753ee8db4bf81bba238d0a3ffd44b8"
   },
   "provenance": {
     "array_byte_order": "little",
@@ -48,7 +47,7 @@
     "json_format": "sorted-keys-compact-final-newline",
     "manifest_algorithm": "SHA-256"
   },
-  "schema": "simple-synthetic-generator-settings-v1",
+  "schema": "simple-synthetic-generator-settings-v2",
   "seed": {
     "derivation_domain": "simple-synthetic-eeg-generator/v1",
     "digest": "SHA-256",

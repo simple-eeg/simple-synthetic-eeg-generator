@@ -12,11 +12,10 @@ from .canonical import canonical_json_bytes
 from .errors import ContractError
 from .seeds import DOMAIN, MASTER_SEED, MASTER_SEED_HEX
 
-SCHEMA = "simple-synthetic-generator-settings-v1"
+SCHEMA = "simple-synthetic-generator-settings-v2"
 EXPECTED_SUBJECTS = tuple(f"{index:03d}" for index in range(1, 32))
-SIMPLE_COMMIT = "c87ad575403336fe3bdea805fab0ebd28d77df1f"
-SIMPLE_FRAMEWORK_COMMIT = "4907ad49a55e3dec22a74a0a13acdddd63bcddf7"
-FROZEN_CANONICAL_SHA256 = "7c76309cd16bfb72440594512fd27fcd511d7f7435c19e0b764456fad8198607"
+SIMPLE_FRAMEWORK_COMMIT = "7fd6837587753ee8db4bf81bba238d0a3ffd44b8"
+FROZEN_CANONICAL_SHA256 = "881690e410e0b74a78430becd842f248f4564cd45dc102d838c08d810ad6bbc3"
 
 
 @dataclass(frozen=True)
@@ -76,6 +75,22 @@ def validate_frozen_settings(values: dict[str, Any]) -> None:
     _require_equal(seed["numpy_bit_generator"], "PCG64DXSM", "NumPy bit generator")
 
     environment = values["environment"]
+    _require_keys(
+        environment,
+        {
+            "eeglab",
+            "matlab",
+            "matplotlib",
+            "neurodsp",
+            "numpy",
+            "operating_system",
+            "platform_machine",
+            "python",
+            "scipy",
+            "simple_framework_commit",
+        },
+        "environment settings",
+    )
     _require_equal(environment["python"], "3.13.6", "Python")
     _require_equal(environment["neurodsp"], "2.3.0", "NeuroDSP")
     _require_equal(environment["numpy"], "2.2.2", "NumPy")
@@ -83,7 +98,6 @@ def validate_frozen_settings(values: dict[str, Any]) -> None:
     _require_equal(environment["matplotlib"], "3.10.0", "Matplotlib")
     _require_equal(environment["matlab"], "26.1.0.3312084 (R2026a) Update 4", "MATLAB")
     _require_equal(environment["eeglab"], "2026.0.0", "EEGLAB")
-    _require_equal(environment["simple_commit"], SIMPLE_COMMIT, "SIMPLE commit")
     _require_equal(
         environment["simple_framework_commit"],
         SIMPLE_FRAMEWORK_COMMIT,

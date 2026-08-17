@@ -27,7 +27,7 @@ from .provenance import (
     seed_manifest_fields,
     seed_manifest_rows,
 )
-from .settings import FrozenSettings, SIMPLE_COMMIT, SIMPLE_FRAMEWORK_COMMIT
+from .settings import FrozenSettings, SIMPLE_FRAMEWORK_COMMIT
 from .validation import validate_cohort, validate_staged_array
 
 ARRAY_NAME = "sub-{subject}_ses-01_run-01_eeg.f32le"
@@ -165,7 +165,7 @@ def build_array_stage(
     generator_commit = str(audit["head"])
     if framework_commit != SIMPLE_FRAMEWORK_COMMIT:
         raise ContractError(
-            "Framework commit must equal the frozen compatible checkpoint "
+            "Framework commit must equal the required source commit "
             f"{SIMPLE_FRAMEWORK_COMMIT}"
         )
     os.mkdir(stage, 0o755)
@@ -207,11 +207,10 @@ def build_array_stage(
         )
         write_new_json(stage / "provenance" / "python_validation.json", validation)
         receipt = {
-            "schema": "simple-synthetic-array-stage-receipt-v1",
+            "schema": "simple-synthetic-array-stage-receipt-v2",
             "status": "passed",
             "generator_commit": generator_commit,
             "framework_commit": framework_commit,
-            "simple_commit": SIMPLE_COMMIT,
             "environment": environment,
             "static_audit": audit,
             "executing_generator_module_origins": module_origins,

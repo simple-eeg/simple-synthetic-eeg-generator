@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Exclusively publish one sibling directory with macOS renamex_np.
 
-This standalone helper intentionally imports only the Python standard library.
+This helper intentionally imports only the Python standard library.
 It is invoked by the locked MATLAB packager through the exact reviewed Python
 interpreter; it never reads generator data or manifest contents.
 """

@@ -9,7 +9,8 @@ required = {'eeg_emptyset','eeg_checkset','pop_saveset','savemode'', ''onefile',
     'version'', ''6','load(setPath, ''-mat'')','-struct'', ''sanitisedStored', ...
     'normalise_mat_header(setPath)','pop_loadset','EXPECTED_SAMPLE_COUNT = 30000', ...
     'EXPECTED_EVENT_LATENCY = 15001','EXPECTED_MATLAB_VERSION = ''26.1.0.3312084 (R2026a) Update 4''', ...
-    'EXPECTED_EEGLAB_VERSION = ''2026.0.0''','EXPECTED_SIMPLE_COMMIT = ''c87ad575403336fe3bdea805fab0ebd28d77df1f''', ...
+    'EXPECTED_EEGLAB_VERSION = ''2026.0.0''','EXPECTED_INPUT_SCHEMA = ''simple-synthetic-array-stage-receipt-v2''', ...
+    '''simple-synthetic-eeglab-metadata-v2''','''simple-synthetic-eeglab-packaging-v2''', ...
     'strcmp(EEG.event.type, ''stimulus'')','assert_semantic_equal_except_path', ...
     'assert_dataset_list_bijection','verify_sha256_manifest(partialRoot)', ...
     'create_directory_exclusive(partialRoot)', ...
@@ -72,17 +73,17 @@ end
 
 function testNoExternalEEGOrTemplateSearch(testCase)
 source = lower(source_text);
-for forbidden = {'.edf','.bdf','/volumes/','uigetfile','nrf.mat','nrfutils','simple/nrfs'}
+for forbidden = {'.edf','.bdf','/volumes/','uigetfile','nrf.mat','nrfutils'}
     verifyEmpty(testCase, strfind(source, forbidden{1}));
 end
 end
 
-function testCheckpointConstantsAreFrozen(testCase)
+function testRequiredConstantsAreFrozen(testCase)
 source = source_text;
 verifyNotEmpty(testCase, strfind(source, 'EXPECTED_MATLAB_RELEASE = ''2026a'''));
-verifyNotEmpty(testCase, strfind(source, 'EXPECTED_FRAMEWORK_COMMIT = ''4907ad49a55e3dec22a74a0a13acdddd63bcddf7'''));
-verifyNotEmpty(testCase, strfind(source, 'EXPECTED_EXCLUSIVE_RENAME_HELPER_SHA256 = ''e2c5d209c1034cb52fc8eb79fef3ca3722575e52b243cffdc9a5b46cbf76fc11'''));
-verifyNotEmpty(testCase, strfind(source, 'EXPECTED_SETTINGS_SHA256 = ''7c76309cd16bfb72440594512fd27fcd511d7f7435c19e0b764456fad8198607'''));
+verifyNotEmpty(testCase, strfind(source, 'EXPECTED_FRAMEWORK_COMMIT = ''7fd6837587753ee8db4bf81bba238d0a3ffd44b8'''));
+verifyNotEmpty(testCase, strfind(source, 'EXPECTED_EXCLUSIVE_RENAME_HELPER_SHA256 = ''5340a2ba3f408aa86f97309ad89daa1b52fe4a0e144cf4cb6a9ce0c7dc273a54'''));
+verifyNotEmpty(testCase, strfind(source, 'EXPECTED_SETTINGS_SHA256 = ''881690e410e0b74a78430becd842f248f4564cd45dc102d838c08d810ad6bbc3'''));
 verifyEmpty(testCase, strfind(source, '__FREEZE_'));
 verifyEmpty(testCase, strfind(source, 'EXPECTED_GENERATOR_COMMIT'));
 verifyNotEmpty(testCase, strfind(source, 'strcmp(receipt.generator_commit, generatorHead)'));
@@ -135,7 +136,7 @@ pretty = fileread(fullfile(root, 'config', 'generator_settings.json'));
 jsondecode(pretty); % prove the pretty source remains valid JSON
 canonical = canonical_json;
 verifyNotEqual(testCase, sha256_text(pretty), sha256_text(canonical));
-verifyEqual(testCase, sha256_text(canonical), '7c76309cd16bfb72440594512fd27fcd511d7f7435c19e0b764456fad8198607');
+verifyEqual(testCase, sha256_text(canonical), '881690e410e0b74a78430becd842f248f4564cd45dc102d838c08d810ad6bbc3');
 source = source_text;
 verifyNotEmpty(testCase, strfind(source, 'sha256_file(settingsPath), EXPECTED_SETTINGS_SHA256'));
 end

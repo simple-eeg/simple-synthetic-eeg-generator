@@ -50,6 +50,7 @@ FORBIDDEN_SUFFIXES = {
 }
 ALLOWED_UNTRACKED_ROOTS = {".venv"}
 ALLOWED_IGNORED_CACHE_COMPONENTS = {"__pycache__", ".pytest_cache", ".ruff_cache"}
+ALLOWED_IGNORED_FILE_NAMES = {".coverage", ".DS_Store"}
 FORBIDDEN_OUTPUT_COMPONENTS = {"data", "outputs", "provenance", "build", "dist"}
 ALLOWED_SUFFIXES = {".cff", ".in", ".json", ".lock", ".m", ".md", ".py", ".toml", ".txt", ".yaml", ".yml"}
 SPECIAL_NAMES = {".gitignore", "LICENSE", "generate_dataset"}
@@ -128,7 +129,7 @@ def _audit_all_checkout_names(source_root: Path, tracked: set[str]) -> dict[str,
                 raise ContractError(
                     f"Ignored or untracked data/workflow-output-like path is forbidden: {relative}"
                 )
-            if parts & ALLOWED_IGNORED_CACHE_COMPONENTS or path.name == ".coverage":
+            if parts & ALLOWED_IGNORED_CACHE_COMPONENTS or path.name in ALLOWED_IGNORED_FILE_NAMES:
                 allowed_cache_paths += 1
                 continue
             raise ContractError(f"Unexpected ignored or untracked source-tree path: {relative}")

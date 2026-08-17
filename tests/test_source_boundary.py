@@ -36,7 +36,7 @@ class SourceBoundaryTests(unittest.TestCase):
 
     def test_gitignore_rejects_generated_workflow_types(self) -> None:
         content = (ROOT / ".gitignore").read_text(encoding="utf-8")
-        for pattern in ("*.set", "*.fdt", "*.f32le", "*.mat", "*.log"):
+        for pattern in (".DS_Store", "*.set", "*.fdt", "*.f32le", "*.mat", "*.log"):
             self.assertIn(pattern, content)
 
     def test_production_cli_has_no_generic_manifest_traversal_command(self) -> None:
@@ -164,6 +164,22 @@ class SourceBoundaryTests(unittest.TestCase):
                 tracked: set[str] = set()
                 with self.assertRaises(ContractError):
                     _audit_all_checkout_names(root, tracked)
+
+    def test_name_only_audit_allows_only_exact_finder_metadata_name(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            nested = root / "nested"
+            nested.mkdir()
+            (root / ".DS_Store").write_bytes(b"finder metadata")
+            (nested / ".DS_Store").write_bytes(b"finder metadata")
+            tracked = {"nested/tracked.py"}
+            result = _audit_all_checkout_names(root, tracked)
+            self.assertEqual(result["ignored_or_untracked_files_outside_venv"], 2)
+            self.assertEqual(result["allowed_ignored_cache_paths_outside_venv"], 2)
+
+            (nested / ".DS_Store.payload").write_bytes(b"not allowlisted")
+            with self.assertRaises(ContractError):
+                _audit_all_checkout_names(root, tracked)
 
     def test_loaded_shadow_package_is_rejected_before_generation(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

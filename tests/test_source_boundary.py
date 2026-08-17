@@ -105,7 +105,7 @@ class SourceBoundaryTests(unittest.TestCase):
             self.assertNotIn("/" + "Users" + "/", text, str(path))
             self.assertNotIn("/" + "Volumes" + "/", text, str(path))
 
-    def test_human_entrypoint_is_one_choice_and_never_names_framework_location(self) -> None:
+    def test_human_entrypoint_is_one_choice_and_never_names_simple_location(self) -> None:
         launcher = (ROOT / "generate_dataset").read_text(encoding="utf-8")
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         workflow = (ROOT / "src/simple_synthetic_eeg_generator/user_workflow.py").read_text(
@@ -113,8 +113,8 @@ class SourceBoundaryTests(unittest.TestCase):
         )
         self.assertIn("./generate_dataset <existing-parent-directory>", readme)
         self.assertIn("simple-synthetic-eeg-demo", workflow)
-        self.assertNotIn("simple-framework/data", workflow)
-        self.assertNotIn("simple-framework/data", launcher)
+        self.assertNotIn("simple/data", workflow)
+        self.assertNotIn("simple/data", launcher)
 
     def test_native_prerequisite_preflight_is_fixed_and_nonproducing(self) -> None:
         source = (ROOT / "matlab/preflight_environment.m").read_text(encoding="utf-8")

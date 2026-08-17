@@ -28,7 +28,7 @@ def parser() -> argparse.ArgumentParser:
     generate.add_argument("--settings", type=Path, required=True)
     generate.add_argument("--lock-file", type=Path, required=True)
     generate.add_argument("--source-root", type=Path, required=True)
-    generate.add_argument("--framework-commit", required=True)
+    generate.add_argument("--simple-commit", required=True)
     generate.add_argument("--output", type=Path, required=True)
     return root
 
@@ -62,7 +62,7 @@ def run(arguments: Sequence[str] | None = None) -> int:
             settings=settings,
             lock_file=args.lock_file,
             source_root=args.source_root,
-            framework_commit=args.framework_commit,
+            simple_commit=args.simple_commit,
         )
         print(output)
         return 0

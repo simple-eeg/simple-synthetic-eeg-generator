@@ -11,11 +11,11 @@ seconds (EEGLAB latency 15001). Subject 31 alone contains the declared smooth
 120-microvolt, 20-Hz tutorial contaminant from +0.300 through +0.500 seconds.
 No exclusion is pre-filled; screening is manual.
 
-The exact generator, required `simple-framework` source, environment, settings,
+The exact generator, required `simple` source, environment, settings,
 seeds, realised parameters, component hashes, dataset-list rows, and file
 hashes are recorded in `provenance/` and `MANIFEST.sha256`.
 
-`simple-framework` progressively updates `data_lists/dataset_list.csv` and
+`simple` progressively updates `data_lists/dataset_list.csv` and
 creates derived files. Preserve this bundle byte-for-byte and run the workflow
 only on an extracted working copy.
 

@@ -16,7 +16,7 @@
       "required": [
         "eeglab", "matlab", "matplotlib", "neurodsp", "numpy",
         "operating_system", "platform_machine", "python", "scipy",
-        "simple_framework_commit"
+        "simple_commit"
       ],
       "properties": {
         "eeglab": {"type": "string"},
@@ -28,7 +28,7 @@
         "platform_machine": {"type": "string"},
         "python": {"type": "string"},
         "scipy": {"type": "string"},
-        "simple_framework_commit": {"const": "7fd6837587753ee8db4bf81bba238d0a3ffd44b8"}
+        "simple_commit": {"const": "e4843b858131d7d6e019740de24f44ade12bc813"}
       }
     },
     "provenance": {"type": "object"},

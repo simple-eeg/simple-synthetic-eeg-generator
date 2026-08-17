@@ -37,7 +37,7 @@
     "platform_machine": "arm64",
     "python": "3.13.6",
     "scipy": "1.15.1",
-    "simple_framework_commit": "7fd6837587753ee8db4bf81bba238d0a3ffd44b8"
+    "simple_commit": "e4843b858131d7d6e019740de24f44ade12bc813"
   },
   "provenance": {
     "array_byte_order": "little",

@@ -14,8 +14,8 @@ from .seeds import DOMAIN, MASTER_SEED, MASTER_SEED_HEX
 
 SCHEMA = "simple-synthetic-generator-settings-v2"
 EXPECTED_SUBJECTS = tuple(f"{index:03d}" for index in range(1, 32))
-SIMPLE_FRAMEWORK_COMMIT = "7fd6837587753ee8db4bf81bba238d0a3ffd44b8"
-FROZEN_CANONICAL_SHA256 = "881690e410e0b74a78430becd842f248f4564cd45dc102d838c08d810ad6bbc3"
+SIMPLE_COMMIT = "e4843b858131d7d6e019740de24f44ade12bc813"
+FROZEN_CANONICAL_SHA256 = "44b776635e010dfffa874260d340c6ea38d7e7e142bf78bf1b3b50ca68c14ae7"
 
 
 @dataclass(frozen=True)
@@ -87,7 +87,7 @@ def validate_frozen_settings(values: dict[str, Any]) -> None:
             "platform_machine",
             "python",
             "scipy",
-            "simple_framework_commit",
+            "simple_commit",
         },
         "environment settings",
     )
@@ -99,9 +99,9 @@ def validate_frozen_settings(values: dict[str, Any]) -> None:
     _require_equal(environment["matlab"], "26.1.0.3312084 (R2026a) Update 4", "MATLAB")
     _require_equal(environment["eeglab"], "2026.0.0", "EEGLAB")
     _require_equal(
-        environment["simple_framework_commit"],
-        SIMPLE_FRAMEWORK_COMMIT,
-        "simple-framework commit",
+        environment["simple_commit"],
+        SIMPLE_COMMIT,
+        "simple commit",
     )
 
     signal = values["signal"]

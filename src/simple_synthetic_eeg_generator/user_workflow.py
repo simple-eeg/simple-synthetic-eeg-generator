@@ -1,4 +1,4 @@
-"""One-choice, fail-closed build of the disposable framework transfer dataset."""
+"""One-choice, fail-closed build of the disposable SIMPLE transfer dataset."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ from .canonical import (
 from .environment import validate_lock_file, validate_producing_interpreter
 from .errors import GeneratorError, TransactionError, ValidationError
 from .reproducibility import generate_reproducibly
-from .settings import EXPECTED_SUBJECTS, SIMPLE_FRAMEWORK_COMMIT, FrozenSettings, load_settings
+from .settings import EXPECTED_SUBJECTS, SIMPLE_COMMIT, FrozenSettings, load_settings
 from .transaction import exclusive_atomic_rename
 
 FINAL_NAME = "simple-synthetic-eeg-demo"
@@ -198,7 +198,7 @@ def _default_stage_builder(output: Path, runtime: RuntimePaths, settings: Frozen
         settings=settings,
         lock_file=runtime.lock_file,
         source_root=runtime.source_root,
-        framework_commit=SIMPLE_FRAMEWORK_COMMIT,
+        simple_commit=SIMPLE_COMMIT,
     )
 
 
@@ -511,7 +511,7 @@ def orchestrate_build(
         print("2/3 Packaging and round-trip checking 31 native one-file EEGLAB datasets...")
         packager(paths.array_stage, paths.packaged_stage, runtime)
         validate_packaged_stage(paths.packaged_stage)
-        print("3/3 Preparing the minimal framework transfer folder...")
+        print("3/3 Preparing the minimal SIMPLE transfer folder...")
         os.mkdir(paths.transfer_partial, 0o755)
         owned.append(paths.transfer_partial)
         os.chmod(paths.transfer_partial, 0o755)

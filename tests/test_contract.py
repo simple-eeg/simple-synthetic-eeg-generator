@@ -28,7 +28,7 @@ from simple_synthetic_eeg_generator.seeds import MASTER_SEED, STREAMS, derive_se
 from simple_synthetic_eeg_generator.settings import (
     EXPECTED_SUBJECTS,
     FROZEN_CANONICAL_SHA256,
-    SIMPLE_FRAMEWORK_COMMIT,
+    SIMPLE_COMMIT,
     load_settings,
     validate_frozen_settings,
 )
@@ -103,8 +103,8 @@ class FrozenContractTests(unittest.TestCase):
         )
         self.assertEqual(settings.subjects, EXPECTED_SUBJECTS)
         self.assertEqual(
-            settings.values["environment"]["simple_framework_commit"],
-            SIMPLE_FRAMEWORK_COMMIT,
+            settings.values["environment"]["simple_commit"],
+            SIMPLE_COMMIT,
         )
         self.assertEqual(
             set(settings.values["environment"]),
@@ -118,7 +118,7 @@ class FrozenContractTests(unittest.TestCase):
                 "platform_machine",
                 "python",
                 "scipy",
-                "simple_framework_commit",
+                "simple_commit",
             },
         )
 

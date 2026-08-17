@@ -41,21 +41,21 @@ The command refuses to overwrite an existing `simple-synthetic-eeg-demo` and
 refuses a parent inside any Git worktree. On failure it removes only its own
 unique hidden transient siblings and does not publish a partial dataset.
 
-## Install the generated data into `simple-framework`
+## Install the generated data into `simple`
 
-The generator never reads, writes or locates `simple-framework`. After a
+The generator never reads, writes or locates `simple`. After a
 successful build, the user manually copies these two entries:
 
-- `simple-synthetic-eeg-demo/raw/` to `simple-framework/data/raw/`;
+- `simple-synthetic-eeg-demo/raw/` to `simple/data/raw/`;
 - `simple-synthetic-eeg-demo/dataset_list.csv` to
-  `simple-framework/data_lists/dataset_list.csv`.
+  `simple/data_lists/dataset_list.csv`.
 
-The CSV deliberately stores framework-relative `data/raw/...` paths. Those
+The CSV deliberately stores repository-relative `data/raw/...` paths. Those
 paths become valid after the manual copy. Do not commit the generated inputs
-to the framework repository.
+to the `simple` repository.
 
-The generated metadata records the required framework source commit:
-`7fd6837587753ee8db4bf81bba238d0a3ffd44b8`.
+The generated metadata records the required `simple` source commit:
+`e4843b858131d7d6e019740de24f44ade12bc813`.
 
 ## One-time prerequisites
 

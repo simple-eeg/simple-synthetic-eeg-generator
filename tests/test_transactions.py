@@ -13,7 +13,7 @@ from simple_synthetic_eeg_generator.reproducibility import (
     _sanitise_worker_diagnostic,
     _sanitised_worker_environment,
 )
-from simple_synthetic_eeg_generator.settings import SIMPLE_FRAMEWORK_COMMIT
+from simple_synthetic_eeg_generator.settings import SIMPLE_COMMIT
 from simple_synthetic_eeg_generator.transaction import (
     exclusive_atomic_rename,
     refuse_stale_partials,
@@ -47,8 +47,8 @@ class TransactionBoundaryTests(unittest.TestCase):
                 self.assertEqual(environment[name], str(root / "worker-environment" / relative))
                 self.assertTrue(Path(environment[name]).is_dir())
 
-    def test_framework_commit_literal_is_exact(self) -> None:
-        self.assertEqual(SIMPLE_FRAMEWORK_COMMIT, "7fd6837587753ee8db4bf81bba238d0a3ffd44b8")
+    def test_simple_commit_literal_is_exact(self) -> None:
+        self.assertEqual(SIMPLE_COMMIT, "e4843b858131d7d6e019740de24f44ade12bc813")
 
     def test_worker_diagnostic_is_bounded_and_removes_private_paths(self) -> None:
         root = Path("/private/tmp/audited-generator")

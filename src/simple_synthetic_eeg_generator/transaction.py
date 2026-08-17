@@ -27,7 +27,7 @@ from .provenance import (
     seed_manifest_fields,
     seed_manifest_rows,
 )
-from .settings import FrozenSettings, SIMPLE_FRAMEWORK_COMMIT
+from .settings import FrozenSettings, SIMPLE_COMMIT
 from .validation import validate_cohort, validate_staged_array
 
 ARRAY_NAME = "sub-{subject}_ses-01_run-01_eeg.f32le"
@@ -147,7 +147,7 @@ def build_array_stage(
     settings: FrozenSettings,
     lock_file: Path,
     source_root: Path,
-    framework_commit: str,
+    simple_commit: str,
     generation_order: Sequence[str] | None = None,
 ) -> Path:
     """Generate, validate, and atomically promote one immutable array stage."""
@@ -163,10 +163,10 @@ def build_array_stage(
     stage = output.with_name(output.name + ".partial." + secrets.token_hex(12))
     _refuse_existing(stage, "Unique partial stage")
     generator_commit = str(audit["head"])
-    if framework_commit != SIMPLE_FRAMEWORK_COMMIT:
+    if simple_commit != SIMPLE_COMMIT:
         raise ContractError(
-            "Framework commit must equal the required source commit "
-            f"{SIMPLE_FRAMEWORK_COMMIT}"
+            "SIMPLE commit must equal the required source commit "
+            f"{SIMPLE_COMMIT}"
         )
     os.mkdir(stage, 0o755)
     try:
@@ -210,7 +210,7 @@ def build_array_stage(
             "schema": "simple-synthetic-array-stage-receipt-v2",
             "status": "passed",
             "generator_commit": generator_commit,
-            "framework_commit": framework_commit,
+            "simple_commit": simple_commit,
             "environment": environment,
             "static_audit": audit,
             "executing_generator_module_origins": module_origins,

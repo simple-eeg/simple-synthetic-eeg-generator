@@ -14,7 +14,7 @@ from .canonical import relative_files, write_new_json
 from .audit import audit_checkout, require_audited_module_origins, require_tracked_input
 from .environment import validate_lock_file, validate_producing_interpreter
 from .errors import TransactionError, ValidationError
-from .settings import FrozenSettings, SIMPLE_FRAMEWORK_COMMIT
+from .settings import FrozenSettings, SIMPLE_COMMIT
 from .transaction import exclusive_atomic_rename, refuse_stale_partials, require_canonical_absent_output
 
 MAX_WORKER_DIAGNOSTIC_CHARS = 600
@@ -142,7 +142,7 @@ def generate_reproducibly(
     settings: FrozenSettings,
     lock_file: Path,
     source_root: Path,
-    framework_commit: str,
+    simple_commit: str,
 ) -> Path:
     """Require canonical/canonical/shuffled fresh processes before promotion."""
 
@@ -153,9 +153,9 @@ def generate_reproducibly(
     require_tracked_input(source_root, lock_file, "requirements/")
     validate_lock_file(lock_file)
     interpreter = validate_producing_interpreter(source_root)
-    if framework_commit != SIMPLE_FRAMEWORK_COMMIT:
+    if simple_commit != SIMPLE_COMMIT:
         raise TransactionError(
-            f"Framework commit must equal required source commit {SIMPLE_FRAMEWORK_COMMIT}"
+            f"SIMPLE commit must equal required source commit {SIMPLE_COMMIT}"
         )
     refuse_stale_partials(output)
     token = secrets.token_hex(12)
@@ -196,8 +196,8 @@ def generate_reproducibly(
                 str(lock_file),
                 "--source-root",
                 str(source_root),
-                "--framework-commit",
-                framework_commit,
+                "--simple-commit",
+                simple_commit,
                 "--output",
                 str(destination),
                 "--order",

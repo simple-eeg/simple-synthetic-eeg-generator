@@ -53,7 +53,7 @@ def main() -> None:
     parser.add_argument("--settings", type=Path, required=True)
     parser.add_argument("--lock-file", type=Path, required=True)
     parser.add_argument("--source-root", type=Path, required=True)
-    parser.add_argument("--framework-commit", required=True)
+    parser.add_argument("--simple-commit", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--order", choices=("canonical", "shuffled"), required=True)
     args = parser.parse_args()
@@ -66,7 +66,7 @@ def main() -> None:
         settings=settings,
         lock_file=args.lock_file,
         source_root=args.source_root,
-        framework_commit=args.framework_commit,
+        simple_commit=args.simple_commit,
         generation_order=order,
     )
 

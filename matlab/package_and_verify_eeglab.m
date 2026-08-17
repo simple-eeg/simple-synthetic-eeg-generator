@@ -20,10 +20,10 @@ EXPECTED_INPUT_SCHEMA = 'simple-synthetic-array-stage-receipt-v3';
 EXPECTED_SAMPLE_COUNT = 30000;
 EXPECTED_RATE_HZ = 1000;
 EXPECTED_EVENT_LATENCY = 15001;
-% Replace once after the final tracked recipe bytes are settled. Never derive
-% the expected identity from the untrusted input stage at packaging time.
-EXPECTED_RECIPE_SHA256 = 'c6e99c4e843a656348064c33a93ed4d64766bec3511a5aec54fccf3b9744228f';
-EXPECTED_TESTED_SIMPLE_COMMIT = 'e4843b858131d7d6e019740de24f44ade12bc813';
+% Keep this independently bound to the canonical tracked recipe bytes. Never
+% derive the expected identity from the untrusted input stage at packaging time.
+EXPECTED_RECIPE_SHA256 = '0ec28e6841fdbf2e1cbffdd6932880e96b5a0f1ad8f69cda716bbe2ce5eda2d3';
+EXPECTED_TESTED_SIMPLE_COMMIT = '7d31744d46ddba1bf11c686825e3420fb8328d19';
 EXPECTED_SIMPLE_INPUT_CONTRACT = 'simple-synthetic-input-v1';
 
 scriptDir = fileparts(mfilename('fullpath'));

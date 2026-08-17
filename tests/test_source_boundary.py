@@ -14,6 +14,7 @@ from simple_synthetic_eeg_generator.audit import (
 )
 from simple_synthetic_eeg_generator.cli import parser
 from simple_synthetic_eeg_generator.errors import ContractError
+from simple_synthetic_eeg_generator.settings import TESTED_SIMPLE_COMMIT
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -111,6 +112,7 @@ class SourceBoundaryTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("./generate_dataset <existing-parent-directory>", readme)
+        self.assertIn(f"`{TESTED_SIMPLE_COMMIT}`", readme)
         self.assertIn("simple-synthetic-eeg-demo", workflow)
         self.assertNotIn("simple/data", workflow)
         self.assertNotIn("simple/data", launcher)

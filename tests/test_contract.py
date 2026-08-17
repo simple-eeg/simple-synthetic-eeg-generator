@@ -128,6 +128,10 @@ class FrozenContractTests(unittest.TestCase):
             set(compatibility["properties"]),
             set(load_settings(SETTINGS).values["compatibility"]),
         )
+        self.assertEqual(
+            compatibility["properties"]["tested_simple_commit"]["const"],
+            TESTED_SIMPLE_COMMIT,
+        )
 
     def test_any_nested_settings_change_is_rejected_by_digest(self) -> None:
         values = json.loads(SETTINGS.read_text(encoding="utf-8"))

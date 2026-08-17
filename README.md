@@ -55,8 +55,9 @@ paths become valid after the manual copy. Do not commit the generated inputs
 to the `simple` repository.
 
 The generated metadata records the `simple` input contract and the `simple`
-commit against which this dataset design was tested. This is provenance for
-the tutorial dataset, not a check that prevents the data being used with a
+commit against which this dataset design was tested. The tested commit is
+`7d31744d46ddba1bf11c686825e3420fb8328d19`. This is provenance for the
+tutorial dataset, not a check that prevents the data being used with a
 different `simple` commit.
 
 ## One-time prerequisites

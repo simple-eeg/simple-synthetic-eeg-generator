@@ -15,8 +15,8 @@ from .seeds import DOMAIN, MASTER_SEED, MASTER_SEED_HEX
 SCHEMA = "simple-synthetic-generator-settings-v3"
 EXPECTED_SUBJECTS = tuple(f"{index:03d}" for index in range(1, 32))
 SIMPLE_INPUT_CONTRACT = "simple-synthetic-input-v1"
-TESTED_SIMPLE_COMMIT = "e4843b858131d7d6e019740de24f44ade12bc813"
-RECIPE_SHA256 = "c6e99c4e843a656348064c33a93ed4d64766bec3511a5aec54fccf3b9744228f"
+TESTED_SIMPLE_COMMIT = "7d31744d46ddba1bf11c686825e3420fb8328d19"
+RECIPE_SHA256 = "0ec28e6841fdbf2e1cbffdd6932880e96b5a0f1ad8f69cda716bbe2ce5eda2d3"
 
 
 @dataclass(frozen=True)

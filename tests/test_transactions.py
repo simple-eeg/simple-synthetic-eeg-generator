@@ -15,7 +15,7 @@ from simple_synthetic_eeg_generator.transaction import (
 
 class TransactionBoundaryTests(unittest.TestCase):
     def test_simple_compatibility_identity_is_exact(self) -> None:
-        self.assertEqual(TESTED_SIMPLE_COMMIT, "e4843b858131d7d6e019740de24f44ade12bc813")
+        self.assertEqual(TESTED_SIMPLE_COMMIT, "7d31744d46ddba1bf11c686825e3420fb8328d19")
         self.assertEqual(SIMPLE_INPUT_CONTRACT, "simple-synthetic-input-v1")
 
     def test_stale_partial_requires_explicit_inspection_before_retry(self) -> None:

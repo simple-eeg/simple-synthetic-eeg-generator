@@ -16,7 +16,7 @@
       "required": ["simple_input_contract", "tested_simple_commit"],
       "properties": {
         "simple_input_contract": {"const": "simple-synthetic-input-v1"},
-        "tested_simple_commit": {"const": "e4843b858131d7d6e019740de24f44ade12bc813"}
+        "tested_simple_commit": {"const": "7d31744d46ddba1bf11c686825e3420fb8328d19"}
       }
     },
     "provenance": {"type": "object"},

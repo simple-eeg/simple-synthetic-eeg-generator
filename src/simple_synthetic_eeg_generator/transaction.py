@@ -15,7 +15,7 @@ from typing import Sequence
 
 from .canonical import build_manifest, write_new_bytes, write_new_csv, write_new_json
 from .audit import audit_checkout, require_audited_module_origins, require_tracked_input
-from .environment import producing_environment_receipt
+from .environment import runtime_environment_receipt
 from .errors import ContractError, TransactionError
 from .model import canonical_array_bytes, generate_subject
 from .provenance import (
@@ -27,7 +27,7 @@ from .provenance import (
     seed_manifest_fields,
     seed_manifest_rows,
 )
-from .settings import FrozenSettings, SIMPLE_COMMIT
+from .settings import FrozenSettings, SIMPLE_INPUT_CONTRACT, TESTED_SIMPLE_COMMIT
 from .validation import validate_cohort, validate_staged_array
 
 ARRAY_NAME = "sub-{subject}_ses-01_run-01_eeg.f32le"
@@ -75,7 +75,7 @@ def exclusive_atomic_rename(source: Path, destination: Path) -> None:
     """Use macOS renamex_np(RENAME_EXCL) so promotion cannot overwrite."""
 
     if sys.platform != "darwin":
-        raise TransactionError("Producing promotion is locked to macOS renamex_np")
+        raise TransactionError("Producing promotion requires macOS renamex_np")
     libc = ctypes.CDLL(None, use_errno=True)
     renamex = libc.renamex_np
     renamex.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint]
@@ -115,8 +115,7 @@ def refuse_stale_partials(output: Path) -> None:
     stale = sorted(output.parent.glob(output.name + ".partial.*"))
     if stale:
         raise TransactionError(
-            "A prior partial exists, so no retry is permitted under the frozen build policy; "
-            "document a successor output instead"
+            "A prior partial exists; inspect and remove that exact failed-build artifact before retrying"
         )
 
 
@@ -145,9 +144,7 @@ def build_array_stage(
     *,
     output: Path,
     settings: FrozenSettings,
-    lock_file: Path,
     source_root: Path,
-    simple_commit: str,
     generation_order: Sequence[str] | None = None,
 ) -> Path:
     """Generate, validate, and atomically promote one immutable array stage."""
@@ -158,20 +155,14 @@ def build_array_stage(
         raise TransactionError("Generated stages must remain outside the Git source tree")
     audit = audit_checkout(source_root)
     require_tracked_input(source_root, settings.source_path, "config/")
-    require_tracked_input(source_root, lock_file, "requirements/")
     refuse_stale_partials(output)
     stage = output.with_name(output.name + ".partial." + secrets.token_hex(12))
     _refuse_existing(stage, "Unique partial stage")
     generator_commit = str(audit["head"])
-    if simple_commit != SIMPLE_COMMIT:
-        raise ContractError(
-            "SIMPLE commit must equal the required source commit "
-            f"{SIMPLE_COMMIT}"
-        )
     os.mkdir(stage, 0o755)
     try:
         module_origins = require_audited_module_origins(source_root)
-        environment = producing_environment_receipt(lock_file, source_root)
+        runtime = runtime_environment_receipt(source_root)
         order = tuple(settings.subjects if generation_order is None else generation_order)
         if len(order) != len(settings.subjects) or set(order) != set(settings.subjects):
             raise ContractError("Generation order must be a permutation of exact subjects 001..031")
@@ -207,11 +198,12 @@ def build_array_stage(
         )
         write_new_json(stage / "provenance" / "python_validation.json", validation)
         receipt = {
-            "schema": "simple-synthetic-array-stage-receipt-v2",
+            "schema": "simple-synthetic-array-stage-receipt-v3",
             "status": "passed",
             "generator_commit": generator_commit,
-            "simple_commit": simple_commit,
-            "environment": environment,
+            "tested_simple_commit": TESTED_SIMPLE_COMMIT,
+            "simple_input_contract": SIMPLE_INPUT_CONTRACT,
+            "runtime": runtime,
             "static_audit": audit,
             "executing_generator_module_origins": module_origins,
             "subject_count": len(results),
@@ -219,7 +211,7 @@ def build_array_stage(
             "array_encoding": "IEEE-754 little-endian float32",
             "contains_real_data": False,
             "contains_screening_decisions": False,
-            "build_variant": "canonical-independent-subject-order",
+            "build_variant": "single-validated-cohort",
         }
         write_new_json(stage / "provenance" / "build_receipt.json", receipt)
         write_new_csv(

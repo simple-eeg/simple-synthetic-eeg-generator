@@ -31,7 +31,7 @@ end
 function testArgumentsRoundTripThroughRealShell(testCase)
 python = string(getenv('SIMPLE_SYNTH_PYTHON'));
 assert(strlength(python) > 0, ...
-    'Set SIMPLE_SYNTH_PYTHON to the exact reviewed interpreter for this test.');
+    'Set SIMPLE_SYNTH_PYTHON to the selected source-local interpreter for this test.');
 code = 'import json,sys;print(json.dumps(sys.argv[1:],separators=(chr(44),chr(58))))';
 expected = ["ordinary", "two words", "O'Brien", ""];
 [status, output] = system(shell_command(python, ["-I", "-c", string(code), expected]));
@@ -50,14 +50,12 @@ verifyEqual(testCase, status, 0);
 verifyMatches(testCase, string(strtrim(output)), "^[0-9a-f]{40}$");
 end
 
-function testExactPythonIdentityCommandConstructionAndExecution(testCase)
+function testSelectedPythonCommandConstructionAndExecution(testCase)
 python = string(getenv('SIMPLE_SYNTH_PYTHON'));
 assert(strlength(python) > 0, ...
-    'Set SIMPLE_SYNTH_PYTHON to the exact reviewed interpreter for this test.');
-code = ['import importlib.metadata as m,json,sys;' ...
-    'print(json.dumps({"version":sys.version.split()[0],"executable":sys.executable,' ...
-    '"prefix":sys.prefix,"base_prefix":sys.base_prefix,' ...
-    '"packages":sorted((d.metadata["Name"].lower(),d.version) for d in m.distributions())},separators=(",",":")))'];
+    'Set SIMPLE_SYNTH_PYTHON to the selected source-local interpreter for this test.');
+code = ['import json,sys;' ...
+    'print(json.dumps({"version":sys.version.split()[0],"executable":sys.executable},separators=(",",":")))'];
 arguments = ["-I", "-c", string(code)];
 command = shell_command(python, arguments);
 expected = join(arrayfun(@expected_quote, [python, arguments]), ' ');
@@ -65,12 +63,8 @@ verifyEqual(testCase, string(command), expected);
 [status, output] = system(command);
 verifyEqual(testCase, status, 0);
 identity = jsondecode(strtrim(output));
-verifyEqual(testCase, string(identity.version), "3.13.6");
+verifyGreaterThan(testCase, strlength(string(identity.version)), 0);
 verifyEqual(testCase, string(identity.executable), python);
-verifyEqual(testCase, numel(identity.packages), 19);
-for i = 1:numel(identity.packages)
-    verifyEqual(testCase, numel(identity.packages{i}), 2);
-end
 end
 
 function quoted = expected_quote(value)

@@ -1,83 +1,58 @@
 %% Package and verify the SIMPLE synthetic EEG demonstration bundle
-% Native packaging transaction for MATLAB 26.1.0.3312084 (R2026a Update 4)
-% and EEGLAB 2026.0.0. This script only reads the accepted Python array
-% stage and writes one new sibling partial before exclusive atomic promotion.
+% This script accepts a capability-validated MATLAB/EEGLAB runtime, reads the
+% accepted Python array stage, and writes one new sibling partial before
+% exclusive atomic promotion. Runtime versions are provenance, not gates.
 %
 % Required environment variables:
 %   SIMPLE_SYNTH_INPUT_ROOT     immutable Python array-stage root
 %   SIMPLE_SYNTH_OUTPUT_ROOT    absent final bundle destination
-%   SIMPLE_SYNTH_EEGLAB_ROOT    exact canonical EEGLAB 2026.0.0 root
-%   SIMPLE_SYNTH_GENERATOR_ROOT exact clean frozen generator checkout
-%   SIMPLE_SYNTH_PYTHON         exact <generator>/.venv/bin/python link
+%   SIMPLE_SYNTH_EEGLAB_ROOT    selected canonical EEGLAB root
+%   SIMPLE_SYNTH_GENERATOR_ROOT exact clean generator checkout
+%   SIMPLE_SYNTH_PYTHON         selected <generator>/.venv/bin/python entry
 %
 % The current MATLAB folder must be this tracked matlab/ directory. EEGLAB
-% must already be initialised from the exact root. No workflow script runs.
+% must already be initialised from the selected root. No workflow script runs.
 
 clearvars;
 
-EXPECTED_MATLAB_RELEASE = '2026a';
-EXPECTED_MATLAB_VERSION = '26.1.0.3312084 (R2026a) Update 4';
-EXPECTED_EEGLAB_VERSION = '2026.0.0';
 EXPECTED_SUBJECTS = compose('%03d', (1:31)');
-EXPECTED_INPUT_SCHEMA = 'simple-synthetic-array-stage-receipt-v2';
+EXPECTED_INPUT_SCHEMA = 'simple-synthetic-array-stage-receipt-v3';
 EXPECTED_SAMPLE_COUNT = 30000;
 EXPECTED_RATE_HZ = 1000;
 EXPECTED_EVENT_LATENCY = 15001;
-% Update once, immediately before the generator source commit, from the
-% exact final tracked canonical settings bytes. Never derive this at runtime.
-EXPECTED_SETTINGS_SHA256 = '44b776635e010dfffa874260d340c6ea38d7e7e142bf78bf1b3b50ca68c14ae7';
-EXPECTED_SIMPLE_COMMIT = 'e4843b858131d7d6e019740de24f44ade12bc813';
-EXPECTED_EXCLUSIVE_RENAME_HELPER_SHA256 = '5340a2ba3f408aa86f97309ad89daa1b52fe4a0e144cf4cb6a9ce0c7dc273a54';
-EXPECTED_PYTHON_VERSION = '3.13.6';
-EXPECTED_PYTHON_LINK_TEXT = 'python3.13';
-EXPECTED_PYTHON313_LINK_TEXT = '/opt/homebrew/opt/python@3.13/bin/python3.13';
-EXPECTED_PYTHON_CANONICAL_TARGET = '/opt/homebrew/Cellar/python@3.13/3.13.6/Frameworks/Python.framework/Versions/3.13/bin/python3.13';
-EXPECTED_PYTHON_BASE_PREFIX = '/opt/homebrew/opt/python@3.13/Frameworks/Python.framework/Versions/3.13';
-EXPECTED_PYTHON_TARGET_SHA256 = '0d1fc12cf4887074b3eb257241f152cb85ca5a135879120b7e8e3b9aa57d5094';
-EXPECTED_LOCK_SHA256 = 'ed84d519fd102843c2da38e7174d829a352eabfb4babdb8321018dbb9cce6b05';
-EXPECTED_PYTHON_PACKAGES = {
-    'contourpy','1.3.3'; 'cycler','0.12.1'; 'fonttools','4.63.0'; 'iniconfig','2.3.0';
-    'kiwisolver','1.5.0'; 'matplotlib','3.10.0'; 'neurodsp','2.3.0'; 'numpy','2.2.2';
-    'packaging','26.3'; 'pillow','12.3.0'; 'pip','25.2'; 'pluggy','1.6.0';
-    'pyparsing','3.3.2'; 'pytest','8.3.4'; 'python-dateutil','2.9.0.post0';
-    'scipy','1.15.1'; 'setuptools','76.0.0'; 'six','1.17.0'; 'wheel','0.45.1'};
-EXPECTED_EEGLAB_FILES = {
-    'eeglab.m', '227ee7b89f2a852d78b342aa9c88e2accbf5fad3915979d1077a109e839a7d10';
-    'functions/popfunc/eeg_emptyset.m', '5359ea9eeb4dc8c85c3465cf6ef7ad8c769f839f027734b268e2b37018cb76be';
-    'functions/adminfunc/eeg_checkset.m', 'fa6356b4a64ea6e16683acc4c65b257084dd1bfc995848de402244ccba00d6f0';
-    'functions/popfunc/pop_saveset.m', 'dab9ddec4475be7ec97a5f2409dc3f6321e1f8b61eb9f90ea83f498648bb71c1';
-    'functions/popfunc/pop_loadset.m', '2c688149f710c9b6f2d340fefdf185db0db60f4828215cb201c12728d5de7fc2';
-    'functions/adminfunc/eeg_getversion.m', '0369d508b5b9e77d7ba12e486fa3b6998f8e34d259818a883e0a21366aa803f4'};
+% Replace once after the final tracked recipe bytes are settled. Never derive
+% the expected identity from the untrusted input stage at packaging time.
+EXPECTED_RECIPE_SHA256 = 'c6e99c4e843a656348064c33a93ed4d64766bec3511a5aec54fccf3b9744228f';
+EXPECTED_TESTED_SIMPLE_COMMIT = 'e4843b858131d7d6e019740de24f44ade12bc813';
+EXPECTED_SIMPLE_INPUT_CONTRACT = 'simple-synthetic-input-v1';
 
 scriptDir = fileparts(mfilename('fullpath'));
 generatorRoot = require_canonical_root('SIMPLE_SYNTH_GENERATOR_ROOT', true);
 assert(strcmp(scriptDir, fullfile(generatorRoot, 'matlab')), ...
     'Script must be the tracked file beneath the exact generator root.');
 assert(strcmp(pwd, scriptDir), 'Run unchanged with MATLAB current folder = tracked matlab/.');
-assert(strcmp(version('-release'), EXPECTED_MATLAB_RELEASE), 'MATLAB release differs.');
-assert(strcmp(version, EXPECTED_MATLAB_VERSION), 'MATLAB full version/build differs.');
 assert_unique_function_binding('shell_command', fullfile(scriptDir, 'shell_command.m'));
 assert_unique_function_binding('contains_ascii_case_insensitive_bytes', ...
     fullfile(scriptDir, 'contains_ascii_case_insensitive_bytes.m'));
 assert_unique_function_binding('find_stale_partial_siblings', ...
     fullfile(scriptDir, 'find_stale_partial_siblings.m'));
+assert_unique_function_binding('validate_runtime_capabilities', ...
+    fullfile(scriptDir, 'validate_runtime_capabilities.m'));
 generatorHead = verify_clean_generator_checkout(generatorRoot);
 
 eeglabRoot = require_canonical_root('SIMPLE_SYNTH_EEGLAB_ROOT', true);
-verify_eeglab_environment(eeglabRoot, EXPECTED_EEGLAB_FILES, EXPECTED_EEGLAB_VERSION);
-pythonPath = verify_python_environment(generatorRoot, EXPECTED_PYTHON_LINK_TEXT, ...
-    EXPECTED_PYTHON313_LINK_TEXT, EXPECTED_PYTHON_CANONICAL_TARGET, EXPECTED_PYTHON_BASE_PREFIX, ...
-    EXPECTED_PYTHON_TARGET_SHA256, EXPECTED_PYTHON_VERSION, EXPECTED_LOCK_SHA256, EXPECTED_PYTHON_PACKAGES);
+runtimeIdentity = validate_runtime_capabilities(eeglabRoot, false);
+pythonPath = require_python_entry(generatorRoot);
 helperPath = fullfile(generatorRoot, 'tools', 'exclusive_rename_macos.py');
 assert(isfile(helperPath) && ~path_is_symlink(helperPath), 'Tracked exclusive-rename helper is absent or a symlink.');
 helperSha256 = sha256_file(helperPath);
-assert(strcmp(helperSha256, EXPECTED_EXCLUSIVE_RENAME_HELPER_SHA256), 'Exclusive-rename helper source hash differs.');
 require_tracked_clean_paths(generatorRoot, ...
     ["matlab/package_and_verify_eeglab.m"; "matlab/shell_command.m"; ...
      "matlab/contains_ascii_case_insensitive_bytes.m"; ...
      "matlab/find_stale_partial_siblings.m"; ...
+     "matlab/validate_runtime_capabilities.m"; ...
      "tools/exclusive_rename_macos.py"; ...
-     "config/generator_settings.json"; "requirements/producing.lock"]);
+     "config/generator_settings.json"]);
 
 inputRoot = require_canonical_root('SIMPLE_SYNTH_INPUT_ROOT', true);
 outputRoot = require_absent_canonical_destination('SIMPLE_SYNTH_OUTPUT_ROOT');
@@ -96,23 +71,35 @@ failureCleanup = onCleanup(@() mark_failure(partialRoot));
 verify_sha256_manifest(inputRoot);
 settingsPath = fullfile(inputRoot, 'provenance', 'generator_settings.json');
 receiptPath = fullfile(inputRoot, 'provenance', 'build_receipt.json');
-assert(strcmp(sha256_file(settingsPath), EXPECTED_SETTINGS_SHA256), 'Frozen settings SHA-256 differs.');
+assert(strcmp(sha256_file(settingsPath), EXPECTED_RECIPE_SHA256), 'Tracked recipe SHA-256 differs.');
 settings = jsondecode(fileread(settingsPath));
 receipt = jsondecode(fileread(receiptPath));
-reproducibility = jsondecode(fileread(fullfile(inputRoot, 'provenance', 'reproducibility_receipt.json')));
-assert_exact_fields(receipt, ["schema"; "status"; "generator_commit"; "simple_commit"; ...
-    "environment"; "static_audit"; "executing_generator_module_origins"; ...
+assert_exact_fields(receipt, ["schema"; "status"; "generator_commit"; "tested_simple_commit"; ...
+    "simple_input_contract"; "runtime"; "static_audit"; "executing_generator_module_origins"; ...
     "subject_count"; "sample_count_per_subject"; "array_encoding"; ...
     "contains_real_data"; "contains_screening_decisions"; "build_variant"], ...
     'Input array-stage receipt');
 assert(strcmp(receipt.schema, EXPECTED_INPUT_SCHEMA) && strcmp(receipt.status, 'passed'), 'Input receipt is not accepted.');
 assert(strcmp(receipt.generator_commit, generatorHead), 'Array stage was not produced by this exact clean generator checkout.');
-assert(strcmp(receipt.simple_commit, EXPECTED_SIMPLE_COMMIT), 'Required SIMPLE source commit differs.');
-assert(strcmp(reproducibility.schema, 'simple-synthetic-reproducibility-v1') && ...
-    strcmp(reproducibility.status, 'passed') && reproducibility.fresh_process_count == 3 && ...
-    reproducibility.canonical_process_count == 2 && reproducibility.shuffled_process_count == 1, ...
-    'Input stage lacks the exact three-fresh-process reproducibility gate.');
+assert(strcmp(receipt.tested_simple_commit, EXPECTED_TESTED_SIMPLE_COMMIT), 'Tested SIMPLE source commit differs.');
+assert(strcmp(receipt.simple_input_contract, EXPECTED_SIMPLE_INPUT_CONTRACT), 'SIMPLE input contract differs.');
+assert_exact_fields(receipt.runtime, ["schema"; "python_version"; "python_implementation"; ...
+    "operating_system"; "operating_system_release"; "machine"; "packages"], ...
+    'Python runtime receipt');
+assert_exact_fields(receipt.runtime.packages, ["matplotlib"; "neurodsp"; "numpy"; "scipy"], ...
+    'Python runtime package receipt');
+assert(strcmp(receipt.runtime.schema, 'simple-synthetic-python-runtime-v1'), ...
+    'Python runtime receipt schema differs.');
+runtimeText = string({receipt.runtime.python_version, receipt.runtime.python_implementation, ...
+    receipt.runtime.operating_system, receipt.runtime.operating_system_release, ...
+    receipt.runtime.machine, receipt.runtime.packages.matplotlib, ...
+    receipt.runtime.packages.neurodsp, receipt.runtime.packages.numpy, receipt.runtime.packages.scipy});
+assert(all(strlength(strtrim(runtimeText)) > 0), 'Python runtime provenance contains a blank value.');
 assert(receipt.subject_count == 31 && receipt.sample_count_per_subject == EXPECTED_SAMPLE_COUNT, 'Input receipt counts differ.');
+assert(strcmp(receipt.array_encoding, 'IEEE-754 little-endian float32'), 'Input array encoding differs.');
+assert(~receipt.contains_real_data && ~receipt.contains_screening_decisions, ...
+    'Input receipt must declare wholly synthetic data with no screening decisions.');
+assert(strlength(strtrim(string(receipt.build_variant))) > 0, 'Input build variant is blank.');
 assert(strcmp(settings.dataset.channel, 'Cz') && strcmp(settings.dataset.event_label, 'stimulus'), 'Dataset labels differ.');
 assert(settings.dataset.sample_rate_hz == EXPECTED_RATE_HZ && ...
     settings.dataset.event_latency_eeglab == EXPECTED_EVENT_LATENCY, 'Dataset timing differs.');
@@ -137,7 +124,7 @@ for i = 1:31
         'EEGLAB path and filename arguments must be character row vectors.');
 
     EEG = make_eeg(subjectID, setName, samples, EXPECTED_SAMPLE_COUNT, ...
-        EXPECTED_RATE_HZ, EXPECTED_EVENT_LATENCY, receipt, EXPECTED_SETTINGS_SHA256);
+        EXPECTED_RATE_HZ, EXPECTED_EVENT_LATENCY, receipt, EXPECTED_RECIPE_SHA256, runtimeIdentity);
     EEG = eeg_checkset(EEG, 'eventconsistency');
     savedEEG = pop_saveset(EEG, 'filename', setName, 'filepath', rawDir, ...
         'savemode', 'onefile', 'version', '6');
@@ -147,23 +134,24 @@ for i = 1:31
     nativeStored = load(setPath, '-mat');
     assert(isstruct(nativeStored) && isfield(nativeStored, 'data') && ~isfield(nativeStored, 'EEG'), ...
         'EEGLAB one-file save must use the canonical top-level field structure.');
-    assert(strcmp(nativeStored.filepath, rawDir), 'Native EEGLAB save did not record its actual path as expected.');
-    assert(strcmp(savedEEG.filepath, rawDir), 'Returned native EEGLAB structure path differs.');
+    assert(isfield(nativeStored, 'filepath'), 'Native EEGLAB save omitted its filepath field.');
+    assert(isstruct(savedEEG) && isfield(savedEEG, 'filename') && strcmp(savedEEG.filename, setName), ...
+        'Returned native EEGLAB structure filename differs.');
     sanitisedStored = nativeStored;
     sanitisedStored.filepath = '';
     sanitisedStored.filename = setName;
-    assert_semantic_equal_except_path(nativeStored, sanitisedStored, rawDir, setName);
+    assert_semantic_equal_except_path(nativeStored, sanitisedStored, setName);
     save(setPath, '-v6', '-mat', '-struct', 'sanitisedStored');
-    normalise_mat_header(setPath);
     storedCheck = load(setPath, '-mat');
-    assert_semantic_equal_except_path(nativeStored, storedCheck, rawDir, setName);
+    assert_semantic_equal_except_path(nativeStored, storedCheck, setName);
     assert(isempty(storedCheck.filepath) && strcmp(storedCheck.filename, setName), 'Serialized path was not neutralised.');
     assert(isempty(storedCheck.datfile) && isnumeric(storedCheck.data), 'One-file dataset contains an external-data reference.');
     audit_serialized_structure(storedCheck, pathAuditTokens);
     audit_raw_mat_bytes(setPath, pathAuditTokens);
     reloaded = pop_loadset('filename', setName, 'filepath', rawDir, 'loadmode', 'all');
     reloaded = eeg_checkset(reloaded, 'eventconsistency');
-    verify_reloaded_eeg(reloaded, samples, EXPECTED_SAMPLE_COUNT, EXPECTED_RATE_HZ, EXPECTED_EVENT_LATENCY);
+    verify_reloaded_eeg(reloaded, samples, EXPECTED_SAMPLE_COUNT, EXPECTED_RATE_HZ, ...
+        EXPECTED_EVENT_LATENCY, receipt, EXPECTED_RECIPE_SHA256, runtimeIdentity, subjectID);
     relativeSet = string(fullfile('data', 'raw', ['sub-' subjectID], 'ses-01', 'eeg', setName));
     expectedSetPaths(i) = replace(relativeSet, filesep, '/');
     roundTripRows(i,:) = {subjectID, '01', '01', sha256_file(arrayPath), sha256_file(setPath)};
@@ -173,7 +161,7 @@ assert_dataset_list_bijection(partialRoot, datasetList, expectedSetPaths);
 assert(isempty(find_files_case_insensitive(partialRoot, '.fdt')), 'Bundle contains an .fdt with unexpected case.');
 write_roundtrip_csv(fullfile(partialRoot, 'provenance', 'eeglab_roundtrip.csv'), roundTripRows);
 write_packaging_receipt(fullfile(partialRoot, 'provenance', 'eeglab_packaging_receipt.json'), ...
-    receipt, EXPECTED_SETTINGS_SHA256, helperSha256, EXPECTED_PYTHON_TARGET_SHA256, EXPECTED_LOCK_SHA256);
+    receipt, EXPECTED_RECIPE_SHA256, helperSha256, runtimeIdentity);
 write_manifest(partialRoot);
 verify_sha256_manifest(partialRoot);
 assert(~path_exists_including_symlink(outputRoot), 'Final output appeared during the transaction.');
@@ -258,21 +246,6 @@ candidateNames = find_stale_partial_siblings(outputRoot);
 assert(isempty(candidateNames), 'A stale sibling packaging partial exists; inspect it and stop.');
 end
 
-function verify_eeglab_environment(root, expectedFiles, expectedVersion)
-for i = 1:size(expectedFiles, 1)
-    pathValue = fullfile(root, strrep(expectedFiles{i,1}, '/', filesep));
-    assert(isfile(pathValue) && ~path_is_symlink(pathValue), 'Pinned EEGLAB source is absent/symlinked.');
-    assert(strcmp(sha256_file(pathValue), expectedFiles{i,2}), 'Pinned EEGLAB source hash differs: %s', expectedFiles{i,1});
-end
-required = {'eeglab','eeg_emptyset','eeg_checkset','pop_saveset','pop_loadset','eeg_getversion'};
-for i = 1:numel(required)
-    locations = string(which(required{i}, '-all'));
-    assert(isscalar(locations) && startsWith(locations(1), root + filesep), ...
-        'EEGLAB function must resolve uniquely beneath the pinned root: %s', required{i});
-end
-assert(strcmp(char(eeg_getversion), expectedVersion), 'EEGLAB version differs.');
-end
-
 function head = verify_clean_generator_checkout(root)
 [status, top] = system(shell_command('/usr/bin/git', ["-C",root,"rev-parse","--show-toplevel"]));
 assert(status == 0 && strcmp(strtrim(top), root), 'Generator root is not its exact Git top level.');
@@ -293,45 +266,18 @@ for i = 1:numel(relativePaths)
 end
 end
 
-function pythonPath = verify_python_environment(generatorRoot, linkText, python313LinkText, ...
-    expectedTarget, expectedBasePrefix, targetDigest, expectedVersion, lockDigest, expectedPackages)
+function pythonPath = require_python_entry(generatorRoot)
 pythonPath = string(getenv('SIMPLE_SYNTH_PYTHON'));
 expectedPath = fullfile(generatorRoot, '.venv', 'bin', 'python');
 assert(strcmp(pythonPath, expectedPath), 'SIMPLE_SYNTH_PYTHON must be exact <generator>/.venv/bin/python.');
-assert(path_is_symlink(pythonPath) && strcmp(string(java.nio.file.Files.readSymbolicLink( ...
-    java.nio.file.Paths.get(char(pythonPath), javaArray('java.lang.String', 0))).toString), linkText), ...
-    'The one accepted venv interpreter symlink differs.');
 pythonBin = string(fileparts(pythonPath));
 pythonVenv = string(fileparts(pythonBin));
 assert_no_symlink_components(pythonVenv, true);
-assert(isfolder(pythonBin) && ~path_is_symlink(pythonBin), 'Virtual-environment bin directory differs.');
-python313 = fullfile(generatorRoot, '.venv', 'bin', 'python3.13');
-assert(path_is_symlink(python313) && strcmp(string(java.nio.file.Files.readSymbolicLink( ...
-    java.nio.file.Paths.get(char(python313), javaArray('java.lang.String', 0))).toString), python313LinkText), ...
-    'The pinned python3.13 symlink differs.');
-target = canonical_existing_path(pythonPath);
-assert(strcmp(target, expectedTarget) && strcmp(sha256_file(target), targetDigest), 'Canonical Python target identity/hash differs.');
-lockPath = fullfile(generatorRoot, 'requirements', 'producing.lock');
-assert(isfile(lockPath) && ~path_is_symlink(lockPath) && strcmp(sha256_file(lockPath), lockDigest), ...
-    'Complete producing lock identity/hash differs.');
-code = ['import importlib.metadata as m,json,sys;' ...
-    'print(json.dumps({"version":sys.version.split()[0],"executable":sys.executable,' ...
-    '"prefix":sys.prefix,"base_prefix":sys.base_prefix,' ...
-    '"packages":sorted((d.metadata["Name"].lower(),d.version) for d in m.distributions())},separators=(",",":")))'];
-[status, output] = system(shell_command(pythonPath, ["-I","-c",string(code)]));
-assert(status == 0, 'Locked Python identity query failed.');
-identity = jsondecode(strtrim(output));
-assert(strcmp(identity.version, expectedVersion) && strcmp(identity.executable, pythonPath) && ...
-    strcmp(identity.prefix, fullfile(generatorRoot, '.venv')) && strcmp(identity.base_prefix, expectedBasePrefix) && ...
-    numel(identity.packages) == 19, ...
-    'Locked Python identity or exact 19-package count differs.');
-actualPackages = strings(numel(identity.packages), 2);
-for i = 1:numel(identity.packages)
-    pair = string(identity.packages{i});
-    assert(numel(pair) == 2, 'Installed Python package receipt row differs.');
-    actualPackages(i,:) = reshape(pair, 1, 2);
-end
-assert(isequal(actualPackages, string(expectedPackages)), 'Installed Python package names/versions differ from the exact lock.');
+assert(isfolder(pythonBin) && ~path_is_symlink(pythonBin), ...
+    'Virtual-environment bin directory must be an ordinary directory.');
+jpath = java.nio.file.Paths.get(char(pythonPath), javaArray('java.lang.String', 0));
+assert(isfile(pythonPath) && java.nio.file.Files.isExecutable(jpath), ...
+    'Selected source-local Python entry is absent or not executable.');
 end
 
 function exclusive_atomic_move(source, destination, pythonPath, helperPath)
@@ -341,7 +287,7 @@ assert(status == 0, 'Exclusive atomic promotion failed without overwrite: %s', s
 assert(isfolder(destination) && ~path_exists_including_symlink(source), 'Exclusive atomic promotion did not complete exactly.');
 end
 
-function EEG = make_eeg(subjectID, setName, samples, sampleCount, rateHz, eventLatency, receipt, settingsDigest)
+function EEG = make_eeg(subjectID, setName, samples, sampleCount, rateHz, eventLatency, receipt, recipeDigest, runtimeIdentity)
 EEG = eeg_emptyset;
 EEG.setname = sprintf('SIMPLE synthetic subject %s', subjectID);
 EEG.filename = setName; EEG.filepath = ''; EEG.subject = subjectID; EEG.session = 1; EEG.run = 1;
@@ -352,28 +298,47 @@ EEG.times = single((0:(sampleCount - 1)) ./ rateHz .* 1000); EEG.data = reshape(
 EEG.chanlocs = struct('labels', 'Cz', 'type', 'synthetic', 'ref', 'synthetic common reference');
 EEG.event = struct('type', 'stimulus', 'latency', eventLatency, 'duration', 0, 'urevent', 1);
 EEG.urevent = struct('type', 'stimulus', 'latency', eventLatency, 'duration', 0);
-EEG.etc.simple_synthetic = struct('schema', 'simple-synthetic-eeglab-metadata-v2', ...
-    'wholly_synthetic', true, 'generator_commit', receipt.generator_commit, ...
-    'simple_commit', receipt.simple_commit, ...
-    'settings_sha256', settingsDigest, 'subjectID', subjectID, 'sessionID', '01', 'runID', '01');
+EEG.etc.simple_synthetic = expected_metadata(receipt, recipeDigest, runtimeIdentity, subjectID);
 end
 
-function assert_semantic_equal_except_path(before, after, expectedNativePath, expectedFilename)
-assert(strcmp(before.filepath, expectedNativePath) && isempty(after.filepath), 'Path-only rewrite contract differs.');
+function metadata = expected_metadata(receipt, recipeDigest, runtimeIdentity, subjectID)
+metadata = struct('schema', 'simple-synthetic-eeglab-metadata-v3', ...
+    'wholly_synthetic', true, ...
+    'generator_commit', receipt.generator_commit, ...
+    'tested_simple_commit', receipt.tested_simple_commit, ...
+    'simple_input_contract', receipt.simple_input_contract, ...
+    'recipe_sha256', recipeDigest, ...
+    'python_version', receipt.runtime.python_version, ...
+    'numpy_version', receipt.runtime.packages.numpy, ...
+    'scipy_version', receipt.runtime.packages.scipy, ...
+    'neurodsp_version', receipt.runtime.packages.neurodsp, ...
+    'matlab_release', runtimeIdentity.matlab_release, ...
+    'matlab_version', runtimeIdentity.matlab_version, ...
+    'eeglab_version', runtimeIdentity.eeglab_version, ...
+    'subjectID', subjectID, 'sessionID', '01', 'runID', '01');
+end
+
+function assert_semantic_equal_except_path(before, after, expectedFilename)
+assert(isfield(before, 'filepath') && isfield(after, 'filepath') && isempty(after.filepath), ...
+    'Path-only rewrite contract differs.');
 assert(strcmp(before.filename, expectedFilename) && strcmp(after.filename, expectedFilename), 'Filename changed during rewrite.');
 before.filepath = ''; after.filepath = '';
 assert(isequaln(before, after), 'Post-native rewrite changed more than filepath.');
 end
 
-function verify_reloaded_eeg(EEG, samples, sampleCount, rateHz, eventLatency)
-assert(isa(EEG.data, 'single') && isequal(size(EEG.data), [1 sampleCount]) && all(isfinite(EEG.data), 'all'), 'Reloaded data differs in type/shape/finiteness.');
-assert(isequal(EEG.data, reshape(samples, 1, [])), 'Reloaded samples differ exactly.');
+function verify_reloaded_eeg(EEG, samples, sampleCount, rateHz, eventLatency, receipt, recipeDigest, runtimeIdentity, subjectID)
+assert(isnumeric(EEG.data) && isequal(size(EEG.data), [1 sampleCount]) && ...
+    all(isfinite(double(EEG.data)), 'all'), 'Reloaded data differs in numeric shape or finiteness.');
+assert(isequal(single(EEG.data), reshape(samples, 1, [])), 'Reloaded float32 sample values differ exactly.');
 assert(EEG.nbchan == 1 && EEG.srate == rateHz && EEG.pnts == sampleCount && EEG.trials == 1, 'Reloaded geometry differs.');
 assert(EEG.xmin == 0 && EEG.xmax == (sampleCount - 1) / rateHz, 'Reloaded time limits differ.');
+assert(strcmp(EEG.subject, subjectID), 'Reloaded synthetic subject identifier differs.');
 assert(isscalar(EEG.chanlocs) && strcmp(EEG.chanlocs.labels, 'Cz'), 'Reloaded channel differs.');
 assert(isscalar(EEG.event) && strcmp(EEG.event.type, 'stimulus') && EEG.event.latency == eventLatency, 'Reloaded event differs.');
 assert(isempty(EEG.epoch) && ~any(strcmpi(string({EEG.event.type}), 'boundary')), 'Unexpected epoch/boundary structure.');
-assert(EEG.etc.simple_synthetic.wholly_synthetic, 'Synthetic flag differs.');
+assert(isfield(EEG.etc, 'simple_synthetic') && ...
+    isequaln(EEG.etc.simple_synthetic, expected_metadata(receipt, recipeDigest, runtimeIdentity, subjectID)), ...
+    'Reloaded synthetic identity or runtime provenance differs.');
 end
 
 function list = read_dataset_list(pathValue, expectedSubjects)
@@ -411,7 +376,7 @@ targets = {'README.md','CITATION.cff','RIGHTS_AUTHORITY_CHECK_REQUIRED.txt','LIC
 for i = 1:numel(names), copyfile(fullfile(inputRoot, 'dataset_assets', names{i}), fullfile(partialRoot, targets{i})); end
 mkdir(fullfile(partialRoot, 'provenance'));
 names = {'generator_settings.json','realised_parameters.csv','seed_manifest.csv','ground_truth_manifest.csv', ...
-    'python_validation.json','build_receipt.json','reproducibility_receipt.json'};
+    'python_validation.json','build_receipt.json'};
 for i = 1:numel(names), copyfile(fullfile(inputRoot, 'provenance', names{i}), fullfile(partialRoot, 'provenance', names{i})); end
 mkdir(fullfile(partialRoot, 'data_lists'));
 copyfile(fullfile(inputRoot, 'data_lists', 'dataset_list.csv'), fullfile(partialRoot, 'data_lists', 'dataset_list.csv'));
@@ -521,14 +486,6 @@ elseif isstruct(value)
 end
 end
 
-function normalise_mat_header(pathValue)
-canonical = 'MATLAB 5.0 MAT-file, Platform: MACA64, Created by SIMPLE synthetic EEG generator; deterministic header';
-header = uint8([canonical repmat(' ', 1, 116 - numel(canonical))]);
-fid = fopen(pathValue, 'r+', 'ieee-le'); assert(fid >= 0, 'Cannot normalise MAT header.');
-cleanup = onCleanup(@() fclose(fid));
-assert(fseek(fid, 0, 'bof') == 0 && fwrite(fid, header, 'uint8') == 116, 'Cannot write canonical MAT header.');
-end
-
 function audit_raw_mat_bytes(pathValue, tokens)
 fid = fopen(pathValue, 'r', 'ieee-le'); assert(fid >= 0, 'Cannot scan MAT bytes.');
 cleanup = onCleanup(@() fclose(fid));
@@ -547,14 +504,19 @@ for i = 1:size(rows,1), lines(end+1,1) = join(string(rows(i,:)), ','); end %#ok<
 write_text_exclusive(pathValue, join(lines + newline, ''));
 end
 
-function write_packaging_receipt(pathValue, inputReceipt, settingsDigest, helperDigest, pythonDigest, lockDigest)
-receipt = struct('schema', 'simple-synthetic-eeglab-packaging-v2', 'status', 'passed', ...
-    'matlab_release', version('-release'), 'matlab_version', version, 'eeglab_version', char(eeg_getversion), ...
-    'set_count', 31, 'fdt_count', 0, 'settings_sha256', settingsDigest, ...
-    'generator_commit', inputReceipt.generator_commit, 'simple_commit', inputReceipt.simple_commit, ...
+function write_packaging_receipt(pathValue, inputReceipt, recipeDigest, helperDigest, runtimeIdentity)
+receipt = struct('schema', 'simple-synthetic-eeglab-packaging-v3', 'status', 'passed', ...
+    'native_onefile_save_reload', 'passed', ...
+    'matlab_release', runtimeIdentity.matlab_release, ...
+    'matlab_version', runtimeIdentity.matlab_version, ...
+    'eeglab_version', runtimeIdentity.eeglab_version, ...
+    'set_count', 31, 'fdt_count', 0, 'recipe_sha256', recipeDigest, ...
+    'generator_commit', inputReceipt.generator_commit, ...
+    'tested_simple_commit', inputReceipt.tested_simple_commit, ...
+    'simple_input_contract', inputReceipt.simple_input_contract, ...
     'exclusive_rename_helper_sha256', helperDigest, ...
-    'python_executable_role', '.venv/bin/python', 'python_target_sha256', pythonDigest, ...
-    'python_lock_sha256', lockDigest);
+    'python_executable_role', '.venv/bin/python', ...
+    'python_runtime', inputReceipt.runtime);
 write_text_exclusive(pathValue, string(jsonencode(receipt)) + newline);
 end
 

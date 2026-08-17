@@ -2,8 +2,8 @@
 """Exclusively publish one sibling directory with macOS renamex_np.
 
 This helper intentionally imports only the Python standard library.
-It is invoked by the locked MATLAB packager through the exact reviewed Python
-interpreter; it never reads generator data or manifest contents.
+It is invoked by the MATLAB packager through the selected checkout-local
+Python interpreter; it never reads generator data or manifest contents.
 """
 
 from __future__ import annotations
@@ -64,7 +64,7 @@ def promote(arguments: list[str], *, renamex=None) -> None:
     if len(arguments) != 2:
         _fail("expected exactly SOURCE_DIR DESTINATION", EXIT_CONTRACT)
     if sys.platform != "darwin":
-        _fail("renamex_np promotion is locked to macOS", EXIT_CONTRACT)
+        _fail("renamex_np promotion requires macOS", EXIT_CONTRACT)
 
     source = _absolute_canonical(arguments[0], must_exist=True)
     raw_destination = Path(arguments[1])

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import secrets
 import signal
 import shutil
@@ -11,7 +12,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Sequence
+from typing import Callable, Mapping, Sequence
 
 from .audit import audit_checkout, require_audited_module_origins
 from .canonical import (
@@ -20,15 +21,17 @@ from .canonical import (
     verify_manifest,
     write_new_bytes,
 )
-from .environment import validate_lock_file, validate_producing_interpreter
+from .environment import runtime_environment_receipt
 from .errors import GeneratorError, TransactionError, ValidationError
-from .reproducibility import generate_reproducibly
-from .settings import EXPECTED_SUBJECTS, SIMPLE_COMMIT, FrozenSettings, load_settings
-from .transaction import exclusive_atomic_rename
+from .settings import EXPECTED_SUBJECTS, FrozenSettings, load_settings
+from .transaction import build_array_stage, exclusive_atomic_rename
 
 FINAL_NAME = "simple-synthetic-eeg-demo"
-MATLAB_APPLICATION = Path("/Applications/MATLAB_R2026a.app")
-EEGLAB_DIRECTORY_NAME = "eeglab2026.0.0"
+DEFAULT_APPLICATIONS_ROOT = Path("/Applications")
+MATLAB_OVERRIDE_VARIABLE = "SIMPLE_SYNTH_MATLAB_EXECUTABLE"
+EEGLAB_OVERRIDE_VARIABLE = "SIMPLE_SYNTH_EEGLAB_ROOT"
+MATLAB_APPLICATION_PATTERN = re.compile(r"MATLAB_R([0-9]{4})([ab])\.app\Z")
+EEGLAB_DIRECTORY_PATTERN = re.compile(r"eeglab([0-9]+(?:\.[0-9]+)*)\Z")
 DATASET_LIST_HEADER = ("subjectID", "sessionID", "runID", "path_raw", "EEGfile_raw")
 
 
@@ -39,8 +42,8 @@ class RuntimePaths:
     matlab: Path
     eeglab_root: Path
     settings: Path
-    lock_file: Path
     generator_head: str
+    python_runtime: dict[str, object]
 
 
 @dataclass(frozen=True)
@@ -95,6 +98,88 @@ def _require_canonical_directory(path: Path, label: str) -> Path:
     return path
 
 
+def _require_canonical_executable(path: Path, label: str) -> Path:
+    if not path.is_absolute():
+        raise TransactionError(f"{label} must be an absolute path")
+    try:
+        canonical = path.resolve(strict=True)
+    except OSError as exc:
+        raise TransactionError(f"{label} cannot be resolved") from exc
+    if canonical != path or path.is_symlink() or not path.is_file() or not os.access(path, os.X_OK):
+        raise TransactionError(f"{label} must be one canonical executable file without symlinks")
+    return path
+
+
+def _select_matlab(
+    *, applications_root: Path, environment: Mapping[str, str]
+) -> Path:
+    override = environment.get(MATLAB_OVERRIDE_VARIABLE, "")
+    if override:
+        return _require_canonical_executable(Path(override), "Selected MATLAB executable")
+
+    applications_root = _require_canonical_directory(applications_root, "Applications directory")
+    candidates: list[tuple[tuple[int, int], Path]] = []
+    for application in applications_root.glob("MATLAB_R*.app"):
+        match = MATLAB_APPLICATION_PATTERN.fullmatch(application.name)
+        if match is None:
+            continue
+        try:
+            _require_canonical_directory(application, "MATLAB application")
+            executable = _require_canonical_executable(
+                application / "bin" / "matlab", "MATLAB executable"
+            )
+        except TransactionError:
+            continue
+        half = 0 if match.group(2) == "a" else 1
+        candidates.append(((int(match.group(1)), half), executable))
+    if not candidates:
+        raise TransactionError(
+            "No usable MATLAB_R*.app installation was found in /Applications; "
+            f"set {MATLAB_OVERRIDE_VARIABLE} to a canonical MATLAB executable if installed elsewhere"
+        )
+    candidates.sort(key=lambda item: (item[0], item[1].as_posix()), reverse=True)
+    highest = candidates[0][0]
+    if sum(rank == highest for rank, _ in candidates) != 1:
+        raise TransactionError("More than one MATLAB installation has the highest detected release")
+    return candidates[0][1]
+
+
+def _select_eeglab(*, home: Path, environment: Mapping[str, str]) -> Path:
+    override = environment.get(EEGLAB_OVERRIDE_VARIABLE, "")
+    if override:
+        selected = _require_canonical_directory(Path(override), "Selected EEGLAB installation")
+        if not (selected / "eeglab.m").is_file() or (selected / "eeglab.m").is_symlink():
+            raise TransactionError("Selected EEGLAB installation does not contain a regular eeglab.m")
+        return selected
+
+    matlab_home = home / "Documents" / "MATLAB"
+    matlab_home = _require_canonical_directory(matlab_home, "User MATLAB directory")
+    candidates: list[tuple[tuple[int, ...], Path]] = []
+    for candidate in matlab_home.glob("eeglab*"):
+        match = EEGLAB_DIRECTORY_PATTERN.fullmatch(candidate.name)
+        if match is None:
+            continue
+        try:
+            selected = _require_canonical_directory(candidate, "EEGLAB installation")
+        except TransactionError:
+            continue
+        entrypoint = selected / "eeglab.m"
+        if not entrypoint.is_file() or entrypoint.is_symlink():
+            continue
+        rank = tuple(int(part) for part in match.group(1).split("."))
+        candidates.append((rank, selected))
+    if not candidates:
+        raise TransactionError(
+            "No usable eeglab<version> installation was found in Documents/MATLAB; "
+            f"set {EEGLAB_OVERRIDE_VARIABLE} to a canonical EEGLAB directory if installed elsewhere"
+        )
+    candidates.sort(key=lambda item: (item[0], item[1].as_posix()), reverse=True)
+    highest = candidates[0][0]
+    if sum(rank == highest for rank, _ in candidates) != 1:
+        raise TransactionError("More than one EEGLAB installation has the highest detected version")
+    return candidates[0][1]
+
+
 def _has_git_boundary(path: Path) -> bool:
     """Reject worktrees, Git directories, bare repositories, and `.git` ancestors."""
 
@@ -142,31 +227,37 @@ def validate_parent(parent: Path) -> Path:
     return parent
 
 
-def discover_runtime(source_root: Path, *, home: Path | None = None) -> RuntimePaths:
-    """Locate fixed, pre-installed dependencies without installing or configuring them."""
+def discover_runtime(
+    source_root: Path,
+    *,
+    home: Path | None = None,
+    applications_root: Path = DEFAULT_APPLICATIONS_ROOT,
+    environment: Mapping[str, str] | None = None,
+) -> RuntimePaths:
+    """Select installed runtimes by location; native capabilities are tested separately."""
 
     source_root = _require_canonical_directory(source_root, "Generator checkout")
     python = source_root / ".venv" / "bin" / "python"
-    matlab_application = _require_canonical_directory(MATLAB_APPLICATION, "MATLAB R2026a application")
-    matlab = matlab_application / "bin" / "matlab"
-    if matlab.is_symlink() or not matlab.is_file() or not os.access(matlab, os.X_OK):
-        raise TransactionError("Exact MATLAB R2026a executable is absent or not executable")
-    eeglab_root = (Path.home() if home is None else home) / "Documents" / "MATLAB" / EEGLAB_DIRECTORY_NAME
-    eeglab_root = _require_canonical_directory(eeglab_root, "EEGLAB 2026.0.0 installation")
+    selected_environment = os.environ if environment is None else environment
+    matlab = _select_matlab(
+        applications_root=applications_root, environment=selected_environment
+    )
+    eeglab_root = _select_eeglab(
+        home=Path.home() if home is None else home,
+        environment=selected_environment,
+    )
     settings = source_root / "config" / "generator_settings.json"
-    lock_file = source_root / "requirements" / "producing.lock"
     audit = audit_checkout(source_root)
     require_audited_module_origins(source_root)
-    validate_lock_file(lock_file)
-    validate_producing_interpreter(source_root)
+    python_runtime = runtime_environment_receipt(source_root)
     return RuntimePaths(
         source_root=source_root,
         python=python,
         matlab=matlab,
         eeglab_root=eeglab_root,
         settings=settings,
-        lock_file=lock_file,
         generator_head=str(audit["head"]),
+        python_runtime=python_runtime,
     )
 
 
@@ -193,12 +284,10 @@ def _unique_build_paths(parent: Path) -> BuildPaths:
 
 
 def _default_stage_builder(output: Path, runtime: RuntimePaths, settings: FrozenSettings) -> None:
-    generate_reproducibly(
+    build_array_stage(
         output=output,
         settings=settings,
-        lock_file=runtime.lock_file,
         source_root=runtime.source_root,
-        simple_commit=SIMPLE_COMMIT,
     )
 
 
@@ -263,7 +352,7 @@ def _run_child(command: list[str], *, cwd: Path, environment: dict[str, str]) ->
             start_new_session=True,
         )
     except OSError as exc:
-        raise ValidationError("MATLAB R2026a could not be started") from exc
+        raise ValidationError("The selected MATLAB executable could not be started") from exc
     try:
         return process.wait()
     except BaseException:
@@ -272,7 +361,7 @@ def _run_child(command: list[str], *, cwd: Path, environment: dict[str, str]) ->
 
 
 def _default_native_preflight(runtime: RuntimePaths) -> None:
-    """Start the exact native stack before the much costlier signal generation."""
+    """Check the selected native stack before the costlier signal generation."""
 
     environment = _clean_child_environment()
     environment.update(
@@ -482,8 +571,8 @@ def _clean_invocation(owned: Sequence[Path]) -> None:
 def _default_reauditor(runtime: RuntimePaths) -> None:
     audit = audit_checkout(runtime.source_root)
     require_audited_module_origins(runtime.source_root)
-    validate_lock_file(runtime.lock_file)
-    validate_producing_interpreter(runtime.source_root)
+    if runtime_environment_receipt(runtime.source_root) != runtime.python_runtime:
+        raise TransactionError("Python runtime changed after native packaging")
     if str(audit["head"]) != runtime.generator_head:
         raise TransactionError("Generator HEAD changed after native packaging")
 
@@ -506,7 +595,7 @@ def orchestrate_build(
             os.mkdir(workspace, 0o755)
             owned.append(workspace)
             os.chmod(workspace, 0o755)
-        print("1/3 Generating and independently reproducing the fixed synthetic signals...")
+        print("1/3 Generating and scientifically validating the fixed synthetic signals...")
         stage_builder(paths.array_stage, runtime, settings)
         print("2/3 Packaging and round-trip checking 31 native one-file EEGLAB datasets...")
         packager(paths.array_stage, paths.packaged_stage, runtime)
@@ -552,7 +641,15 @@ def build_dataset(
     parent = validate_parent(parent)
     runtime = discover_runtime(source_root)
     settings = load_settings(runtime.settings)
-    print("Checking the exact MATLAB and EEGLAB prerequisites before generation...")
+    packages = dict(runtime.python_runtime["packages"])
+    package_text = ", ".join(f"{name} {packages[name]}" for name in sorted(packages))
+    print(
+        f"Using Python {runtime.python_runtime['python_version']} "
+        f"({runtime.python_runtime['machine']}); {package_text}"
+    )
+    print(f"Using MATLAB executable: {runtime.matlab}")
+    print(f"Using EEGLAB installation: {runtime.eeglab_root}")
+    print("Checking MATLAB and EEGLAB capabilities before generation...")
     native_preflight(runtime)
     paths = _unique_build_paths(parent)
     return orchestrate_build(paths=paths, runtime=runtime, settings=settings)

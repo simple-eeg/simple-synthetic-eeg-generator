@@ -17,6 +17,8 @@ from simple_synthetic_eeg_generator.user_workflow import (
     _default_reauditor,
     _matlab_environment,
     _run_child,
+    _select_eeglab,
+    _select_matlab,
     orchestrate_build,
     parser,
     validate_packaged_stage,
@@ -25,6 +27,23 @@ from simple_synthetic_eeg_generator.user_workflow import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def python_runtime() -> dict[str, object]:
+    return {
+        "schema": "simple-synthetic-python-runtime-v1",
+        "python_version": "3.13.6",
+        "python_implementation": "CPython",
+        "operating_system": "macOS",
+        "operating_system_release": "26.6.1",
+        "machine": "arm64",
+        "packages": {
+            "matplotlib": "3.10.0",
+            "neurodsp": "2.3.0",
+            "numpy": "2.2.2",
+            "scipy": "1.15.1",
+        },
+    }
 
 
 def make_dataset_list(path: Path) -> None:
@@ -81,8 +100,8 @@ def make_runtime() -> RuntimePaths:
         matlab=Path("/Applications/MATLAB_R2026a.app/bin/matlab"),
         eeglab_root=Path.home() / "Documents/MATLAB/eeglab2026.0.0",
         settings=ROOT / "config/generator_settings.json",
-        lock_file=ROOT / "requirements/producing.lock",
         generator_head="a" * 40,
+        python_runtime=python_runtime(),
     )
 
 
@@ -98,6 +117,57 @@ class UserWorkflowTests(unittest.TestCase):
         self.assertIn("./generate_dataset", launcher_text)
         self.assertIn("[ ! -x", launcher_text)
         self.assertIn("-u -I", launcher_text)
+
+    def test_runtime_discovery_selects_newest_installed_matlab_and_eeglab(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            applications = root / "Applications"
+            applications.mkdir()
+            for release in ("2026a", "2027b"):
+                executable = applications / f"MATLAB_R{release}.app" / "bin" / "matlab"
+                executable.parent.mkdir(parents=True)
+                executable.write_bytes(b"matlab")
+                executable.chmod(0o755)
+            selected_matlab = _select_matlab(applications_root=applications, environment={})
+            self.assertEqual(
+                selected_matlab,
+                applications / "MATLAB_R2027b.app" / "bin" / "matlab",
+            )
+
+            home = root / "home"
+            matlab_home = home / "Documents" / "MATLAB"
+            for version in ("2026.0.0", "2027.1"):
+                eeglab = matlab_home / f"eeglab{version}"
+                eeglab.mkdir(parents=True)
+                (eeglab / "eeglab.m").write_text("% fixture\n", encoding="utf-8")
+            selected_eeglab = _select_eeglab(home=home, environment={})
+            self.assertEqual(selected_eeglab, matlab_home / "eeglab2027.1")
+
+    def test_runtime_discovery_honours_canonical_optional_overrides(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            matlab = root / "custom-matlab"
+            matlab.write_bytes(b"matlab")
+            matlab.chmod(0o755)
+            eeglab = root / "custom-eeglab"
+            eeglab.mkdir()
+            (eeglab / "eeglab.m").write_text("% fixture\n", encoding="utf-8")
+            environment = {
+                "SIMPLE_SYNTH_MATLAB_EXECUTABLE": str(matlab),
+                "SIMPLE_SYNTH_EEGLAB_ROOT": str(eeglab),
+            }
+            self.assertEqual(
+                _select_matlab(applications_root=root, environment=environment), matlab
+            )
+            self.assertEqual(_select_eeglab(home=root, environment=environment), eeglab)
+
+            alias = root / "matlab-alias"
+            alias.symlink_to(matlab)
+            with self.assertRaises(TransactionError):
+                _select_matlab(
+                    applications_root=root,
+                    environment={"SIMPLE_SYNTH_MATLAB_EXECUTABLE": str(alias)},
+                )
 
     def test_parent_must_be_absolute_absent_writable_and_outside_git(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -426,9 +496,23 @@ class UserWorkflowTests(unittest.TestCase):
         ), mock.patch(
             "simple_synthetic_eeg_generator.user_workflow.require_audited_module_origins"
         ), mock.patch(
-            "simple_synthetic_eeg_generator.user_workflow.validate_lock_file"
+            "simple_synthetic_eeg_generator.user_workflow.runtime_environment_receipt",
+            return_value=runtime.python_runtime,
+        ), self.assertRaises(TransactionError):
+            _default_reauditor(runtime)
+
+    def test_post_matlab_reaudit_requires_same_python_runtime(self) -> None:
+        runtime = make_runtime()
+        changed = python_runtime()
+        changed["python_version"] = "3.14.0"
+        with mock.patch(
+            "simple_synthetic_eeg_generator.user_workflow.audit_checkout",
+            return_value={"head": runtime.generator_head},
         ), mock.patch(
-            "simple_synthetic_eeg_generator.user_workflow.validate_producing_interpreter"
+            "simple_synthetic_eeg_generator.user_workflow.require_audited_module_origins"
+        ), mock.patch(
+            "simple_synthetic_eeg_generator.user_workflow.runtime_environment_receipt",
+            return_value=changed,
         ), self.assertRaises(TransactionError):
             _default_reauditor(runtime)
 

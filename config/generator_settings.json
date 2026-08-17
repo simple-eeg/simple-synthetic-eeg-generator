@@ -1,13 +1,13 @@
 {
   "build": {
-    "canonical_fresh_process_runs": 2,
     "final_path_must_be_absent": true,
-    "fresh_process_per_run": true,
-    "no_retry_after_failure": true,
     "partial_sibling_pattern": "<output>.partial.<random>",
-    "runtime_input_allowlist": ["tracked frozen settings JSON", "tracked complete hash-pinned lock"],
-    "shuffled_order_fresh_process_runs": 1,
-    "successful_run_comparison": "byte-identical files and MANIFEST.sha256"
+    "runtime_input_allowlist": ["tracked frozen scientific settings JSON"],
+    "successful_build_validation": "scientific, structural, native one-file save/reload, and transfer-integrity gates"
+  },
+  "compatibility": {
+    "simple_input_contract": "simple-synthetic-input-v1",
+    "tested_simple_commit": "e4843b858131d7d6e019740de24f44ade12bc813"
   },
   "dataset": {
     "channel": "Cz",
@@ -27,18 +27,6 @@
       "025", "026", "027", "028", "029", "030", "031"
     ]
   },
-  "environment": {
-    "eeglab": "2026.0.0",
-    "matlab": "26.1.0.3312084 (R2026a) Update 4",
-    "matplotlib": "3.10.0",
-    "neurodsp": "2.3.0",
-    "numpy": "2.2.2",
-    "operating_system": "macOS 26.6.1",
-    "platform_machine": "arm64",
-    "python": "3.13.6",
-    "scipy": "1.15.1",
-    "simple_commit": "e4843b858131d7d6e019740de24f44ade12bc813"
-  },
   "provenance": {
     "array_byte_order": "little",
     "array_dtype": "float32",
@@ -47,7 +35,7 @@
     "json_format": "sorted-keys-compact-final-newline",
     "manifest_algorithm": "SHA-256"
   },
-  "schema": "simple-synthetic-generator-settings-v2",
+  "schema": "simple-synthetic-generator-settings-v3",
   "seed": {
     "derivation_domain": "simple-synthetic-eeg-generator/v1",
     "digest": "SHA-256",

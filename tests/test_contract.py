@@ -27,12 +27,12 @@ from simple_synthetic_eeg_generator.model import SubjectResult
 from simple_synthetic_eeg_generator.seeds import MASTER_SEED, STREAMS, derive_seed
 from simple_synthetic_eeg_generator.settings import (
     EXPECTED_SUBJECTS,
-    FROZEN_CANONICAL_SHA256,
-    SIMPLE_COMMIT,
+    RECIPE_SHA256,
+    SIMPLE_INPUT_CONTRACT,
+    TESTED_SIMPLE_COMMIT,
     load_settings,
     validate_frozen_settings,
 )
-from simple_synthetic_eeg_generator.worker import shuffled_order
 
 ROOT = Path(__file__).resolve().parents[1]
 SETTINGS = ROOT / "config" / "generator_settings.json"
@@ -99,45 +99,34 @@ class FrozenContractTests(unittest.TestCase):
         settings = load_settings(SETTINGS)
         self.assertEqual(
             hashlib.sha256(settings.canonical_bytes).hexdigest(),
-            FROZEN_CANONICAL_SHA256,
+            RECIPE_SHA256,
         )
         self.assertEqual(settings.subjects, EXPECTED_SUBJECTS)
         self.assertEqual(
-            settings.values["environment"]["simple_commit"],
-            SIMPLE_COMMIT,
+            settings.values["compatibility"]["tested_simple_commit"],
+            TESTED_SIMPLE_COMMIT,
         )
         self.assertEqual(
-            set(settings.values["environment"]),
-            {
-                "eeglab",
-                "matlab",
-                "matplotlib",
-                "neurodsp",
-                "numpy",
-                "operating_system",
-                "platform_machine",
-                "python",
-                "scipy",
-                "simple_commit",
-            },
+            settings.values["compatibility"]["simple_input_contract"],
+            SIMPLE_INPUT_CONTRACT,
         )
 
-    def test_unexpected_environment_identity_is_rejected(self) -> None:
+    def test_unexpected_compatibility_identity_is_rejected(self) -> None:
         values = json.loads(SETTINGS.read_text(encoding="utf-8"))
-        values["environment"]["unexpected_repository_commit"] = "0" * 40
+        values["compatibility"]["unexpected_repository_commit"] = "0" * 40
         with self.assertRaises(ContractError):
             validate_frozen_settings(values)
 
-    def test_settings_schema_has_one_exact_environment_shape(self) -> None:
+    def test_settings_schema_has_one_exact_compatibility_shape(self) -> None:
         schema = json.loads(
             (ROOT / "config/generator_settings.schema.json").read_text(encoding="utf-8")
         )
-        environment = schema["properties"]["environment"]
-        self.assertFalse(environment["additionalProperties"])
-        self.assertEqual(set(environment["required"]), set(environment["properties"]))
+        compatibility = schema["properties"]["compatibility"]
+        self.assertFalse(compatibility["additionalProperties"])
+        self.assertEqual(set(compatibility["required"]), set(compatibility["properties"]))
         self.assertEqual(
-            set(environment["properties"]),
-            set(load_settings(SETTINGS).values["environment"]),
+            set(compatibility["properties"]),
+            set(load_settings(SETTINGS).values["compatibility"]),
         )
 
     def test_any_nested_settings_change_is_rejected_by_digest(self) -> None:
@@ -147,7 +136,7 @@ class FrozenContractTests(unittest.TestCase):
         validate_frozen_settings(changed)  # subset validation is not the identity gate
         self.assertNotEqual(
             hashlib.sha256(canonical_json_bytes(changed)).hexdigest(),
-            FROZEN_CANONICAL_SHA256,
+            RECIPE_SHA256,
         )
 
     def test_known_seed_vectors(self) -> None:
@@ -215,13 +204,7 @@ class FrozenContractTests(unittest.TestCase):
         )
         self.assertEqual(rows[-1]["subjectID"], "031")
 
-    def test_shuffled_order_is_deterministic_permutation(self) -> None:
-        first = shuffled_order(EXPECTED_SUBJECTS)
-        self.assertEqual(first, shuffled_order(EXPECTED_SUBJECTS))
-        self.assertNotEqual(first, EXPECTED_SUBJECTS)
-        self.assertEqual(set(first), set(EXPECTED_SUBJECTS))
-
-    @unittest.skipUnless(__import__("importlib").util.find_spec("numpy"), "locked NumPy is absent")
+    @unittest.skipUnless(__import__("importlib").util.find_spec("numpy"), "NumPy is absent")
     def test_ground_truth_causal_seed_lists_are_exact_and_cross_manifest_bound(self) -> None:
         settings = load_settings(SETTINGS).values
         results = [self.synthetic_subject_result(subject_id) for subject_id in EXPECTED_SUBJECTS]

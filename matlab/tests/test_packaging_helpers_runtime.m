@@ -10,14 +10,14 @@ addpath(matlabDir);
 testCase.addTeardown(@() rmpath(matlabDir));
 end
 
-function testCanonicalHeaderMakesEquivalentSavesByteIdentical(testCase)
+function testEquivalentV6StructSavesReloadSemantically(testCase)
 root = fresh_root(testCase);
 left = fullfile(root, 'left.set'); right = fullfile(root, 'right.set');
 fixture = fixture_struct;
-save(left, '-v6', '-mat', '-struct', 'fixture'); pause(1.1);
+save(left, '-v6', '-mat', '-struct', 'fixture');
 save(right, '-v6', '-mat', '-struct', 'fixture');
-normalise_header(left); normalise_header(right);
-verifyEqual(testCase, file_bytes(left), file_bytes(right));
+verifyEqual(testCase, load(left, '-mat'), fixture);
+verifyEqual(testCase, load(right, '-mat'), fixture);
 end
 
 function testTopLevelStructSanitisationChangesPathOnly(testCase)
@@ -25,7 +25,7 @@ root = fresh_root(testCase); pathValue = fullfile(root, 'fixture.set');
 before = fixture_struct; before.filepath = fullfile(root, 'absolute', 'native');
 save(pathValue, '-v6', '-mat', '-struct', 'before');
 loaded = load(pathValue, '-mat'); verifyFalse(testCase, isfield(loaded, 'EEG'));
-loaded.filepath = ''; save(pathValue, '-v6', '-mat', '-struct', 'loaded'); normalise_header(pathValue);
+loaded.filepath = ''; save(pathValue, '-v6', '-mat', '-struct', 'loaded');
 after = load(pathValue, '-mat'); before.filepath = '';
 verifyTrue(testCase, isempty(after.filepath)); verifyEqual(testCase, after, before);
 verifyClass(testCase, after.data, 'single'); verifySize(testCase, after.data, [1 30000]);
@@ -110,18 +110,6 @@ fixture = struct('setname','fixture','filename','fixture.set','filepath','', ...
     'srate',1000,'xmin',0,'xmax',29.999,'times',single(0:29999), ...
     'data',single(reshape(1:30000,1,[])),'chanlocs',struct('labels','Cz'), ...
     'event',struct('type','stimulus','latency',15001),'datfile','');
-end
-
-function normalise_header(pathValue)
-canonical = 'MATLAB 5.0 MAT-file, Platform: MACA64, Created by SIMPLE synthetic EEG generator; deterministic header';
-header = uint8([canonical repmat(' ', 1, 116 - numel(canonical))]);
-fid = fopen(pathValue, 'r+'); cleanup = onCleanup(@() fclose(fid));
-fseek(fid, 0, 'bof'); fwrite(fid, header, 'uint8');
-end
-
-function bytes = file_bytes(pathValue)
-fid = fopen(pathValue, 'r'); cleanup = onCleanup(@() fclose(fid));
-bytes = fread(fid, Inf, '*uint8');
 end
 
 function write_bytes(pathValue, bytes)

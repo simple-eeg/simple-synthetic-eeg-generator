@@ -25,7 +25,7 @@ from simple_synthetic_eeg_generator.settings import load_settings
 from simple_synthetic_eeg_generator.validation import _baseline_corrected_epoch, _relative_epoch_window
 
 
-@unittest.skipIf(np is None, "locked NumPy/SciPy test environment is not installed")
+@unittest.skipIf(np is None, "NumPy/SciPy test environment is not installed")
 class ScientificHelperTests(unittest.TestCase):
     def test_event_components_match_independent_oracle_and_exact_supports(self) -> None:
         settings = load_settings(Path(__file__).resolve().parents[1] / "config/generator_settings.json").values
@@ -92,7 +92,7 @@ class ScientificHelperTests(unittest.TestCase):
 
     def test_neurodsp_first_import_and_call_restores_global_random_state(self) -> None:
         if importlib.util.find_spec("neurodsp") is None:
-            self.skipTest("locked NeuroDSP test environment is not installed")
+            self.skipTest("NeuroDSP test environment is not installed")
         self.assertNotIn("neurodsp", sys.modules)
         np.random.seed(123456)
         before = np.random.get_state()

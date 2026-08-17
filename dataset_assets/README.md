@@ -11,21 +11,24 @@ seconds (EEGLAB latency 15001). Subject 31 alone contains the declared smooth
 120-microvolt, 20-Hz tutorial contaminant from +0.300 through +0.500 seconds.
 No exclusion is pre-filled; screening is manual.
 
-The exact generator, required `simple` source, environment, settings,
-seeds, realised parameters, component hashes, dataset-list rows, and file
-hashes are recorded in `provenance/` and `MANIFEST.sha256`.
+The generator validates the recipe, seeds, realised parameters, component
+structure, dataset-list rows and native file round trips before publication.
+Each `.set` records the generator commit, tested `simple` input contract,
+recipe digest and actual Python, numerical-library, MATLAB and EEGLAB versions
+used to create it. Rich build receipts and manifests are internal validation
+artefacts and are removed from the minimal transfer folder.
 
-`simple` progressively updates `data_lists/dataset_list.csv` and
-creates derived files. Preserve this bundle byte-for-byte and run the workflow
-only on an extracted working copy.
+`simple` progressively updates `data_lists/dataset_list.csv` and creates
+derived files. Keep the generated transfer folder as the source copy and run
+the workflow on the entries copied into `simple`.
 
 ## Citation requested
 
 CC0 does not legally require attribution, but scholarly citation is strongly
 requested. Please cite the eventual SIMPLE methods paper, archived dataset
-version/DOI, and exact generator software release recorded in the build
-receipt. Hosting, DOI, and publication timing are deliberately unset in this
-local candidate.
+version/DOI, and generator software commit recorded in the dataset metadata.
+Hosting, DOI, and publication timing are deliberately unset in this local
+candidate.
 
 ## Licence and release status
 

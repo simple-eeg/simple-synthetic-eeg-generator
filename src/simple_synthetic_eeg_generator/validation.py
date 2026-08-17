@@ -16,7 +16,7 @@ def _scientific_modules():
         import numpy as np
         from scipy.signal import periodogram, welch
     except ImportError as exc:
-        raise ContractError("The locked NumPy and SciPy dependencies are required") from exc
+        raise ContractError("NumPy and SciPy with the required validation capabilities are required") from exc
     return np, welch, periodogram
 
 

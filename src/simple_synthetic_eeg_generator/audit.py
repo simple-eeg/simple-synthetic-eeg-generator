@@ -235,7 +235,7 @@ def audit_checkout(source_root: Path) -> dict[str, object]:
         "import_roots": sorted(imports),
         "name_only_checkout_audit": name_audit,
         "source_tree_data_like_files_outside_allowlisted_venv": 0,
-        "runtime_input_classes": ["tracked frozen settings JSON", "tracked complete hash-pinned lock"],
+        "runtime_input_classes": ["tracked frozen scientific settings JSON"],
     }
 
 

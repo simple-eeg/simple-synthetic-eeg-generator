@@ -9,8 +9,8 @@ class ContractError(GeneratorError):
     """The frozen design or input contract was not met."""
 
 
-class EnvironmentLockError(GeneratorError):
-    """The producing runtime or dependency lock was not exact."""
+class EnvironmentCapabilityError(GeneratorError):
+    """The producing runtime lacks a required capability."""
 
 
 class ValidationError(GeneratorError):

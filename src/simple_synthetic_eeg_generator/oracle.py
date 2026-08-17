@@ -19,7 +19,7 @@ def reconstruct_analytic_components(
     try:
         import numpy as np
     except ImportError as exc:
-        raise ContractError("The locked NumPy dependency is required") from exc
+        raise ContractError("NumPy with the required generator capabilities is required") from exc
 
     dataset = settings["dataset"]
     response = settings["signal"]["response"]

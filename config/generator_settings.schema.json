@@ -1,34 +1,22 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://simple-eeg.example/schema/generator-settings-v2.json",
+  "$id": "https://simple-eeg.example/schema/generator-settings-v3.json",
   "title": "SIMPLE synthetic generator frozen settings",
   "type": "object",
   "additionalProperties": false,
   "description": "Nested values are additionally bound byte-for-byte by the canonical SHA-256 enforced by settings.py.",
-  "required": ["schema", "build", "dataset", "environment", "provenance", "seed", "signal", "validation"],
+  "required": ["schema", "build", "compatibility", "dataset", "provenance", "seed", "signal", "validation"],
   "properties": {
-    "schema": {"const": "simple-synthetic-generator-settings-v2"},
+    "schema": {"const": "simple-synthetic-generator-settings-v3"},
     "build": {"type": "object"},
     "dataset": {"type": "object"},
-    "environment": {
+    "compatibility": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "eeglab", "matlab", "matplotlib", "neurodsp", "numpy",
-        "operating_system", "platform_machine", "python", "scipy",
-        "simple_commit"
-      ],
+      "required": ["simple_input_contract", "tested_simple_commit"],
       "properties": {
-        "eeglab": {"type": "string"},
-        "matlab": {"type": "string"},
-        "matplotlib": {"type": "string"},
-        "neurodsp": {"type": "string"},
-        "numpy": {"type": "string"},
-        "operating_system": {"type": "string"},
-        "platform_machine": {"type": "string"},
-        "python": {"type": "string"},
-        "scipy": {"type": "string"},
-        "simple_commit": {"const": "e4843b858131d7d6e019740de24f44ade12bc813"}
+        "simple_input_contract": {"const": "simple-synthetic-input-v1"},
+        "tested_simple_commit": {"const": "e4843b858131d7d6e019740de24f44ade12bc813"}
       }
     },
     "provenance": {"type": "object"},

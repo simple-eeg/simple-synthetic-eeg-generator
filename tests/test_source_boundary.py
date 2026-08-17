@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import os
-import re
 import subprocess
 import sys
 import tempfile
@@ -70,7 +69,7 @@ class SourceBoundaryTests(unittest.TestCase):
                 env=environment,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(result.stdout.strip(), "valid simple-synthetic-generator-settings-v2")
+            self.assertEqual(result.stdout.strip(), "valid simple-synthetic-generator-settings-v3")
 
     def test_tracked_repository_contains_no_generated_eeg_files(self) -> None:
         tracked = subprocess.run(
@@ -116,33 +115,44 @@ class SourceBoundaryTests(unittest.TestCase):
         self.assertNotIn("simple/data", workflow)
         self.assertNotIn("simple/data", launcher)
 
-    def test_native_prerequisite_preflight_is_fixed_and_nonproducing(self) -> None:
-        source = (ROOT / "matlab/preflight_environment.m").read_text(encoding="utf-8")
-        for required in (
-            "26.1.0.3312084 (R2026a) Update 4",
-            "2026.0.0",
-            "restoredefaultpath",
-            "eeglab('nogui')",
-            "EXPECTED_EEGLAB_FILES",
-        ):
-            self.assertIn(required, source)
-        for forbidden in ("pop_saveset(", "pop_loadset(", "fopen(pathValue, 'w", "mkdir(", "copyfile("):
-            self.assertNotIn(forbidden, source)
-
-    def test_preflight_and_packager_share_exact_eeglab_hash_constants(self) -> None:
+    def test_native_preflight_and_packager_share_capability_validator(self) -> None:
         preflight = (ROOT / "matlab/preflight_environment.m").read_text(encoding="utf-8")
         packager = (ROOT / "matlab/package_and_verify_eeglab.m").read_text(encoding="utf-8")
-        pattern = re.compile(r"'([^']+\.m)', '([0-9a-f]{64})'")
-        preflight_hashes = dict(pattern.findall(preflight))
-        packager_hashes = dict(pattern.findall(packager))
-        self.assertEqual(len(preflight_hashes), 6)
-        self.assertEqual(preflight_hashes, packager_hashes)
+        helper = (ROOT / "matlab/validate_runtime_capabilities.m").read_text(encoding="utf-8")
+        self.assertIn("validate_runtime_capabilities(eeglabRoot, true)", preflight)
+        self.assertIn("validate_runtime_capabilities(eeglabRoot, false)", packager)
+        for required in (
+            "pop_saveset",
+            "pop_loadset",
+            "eeg_checkset",
+            "savemode", "onefile",
+            "version", "6",
+            ".fdt",
+        ):
+            self.assertIn(required, helper)
+        self.assertIn("native_onefile_save_reload", packager)
+        self.assertIn("matlab_release", packager)
+        self.assertIn("eeglab_version", packager)
 
-    def test_validation_sources_make_no_preregistration_overclaim(self) -> None:
-        texts = [(ROOT / "README.md").read_text(encoding="utf-8")]
-        texts.extend(path.read_text(encoding="utf-8") for path in (ROOT / "src").rglob("*.py"))
-        self.assertNotRegex("\n".join(texts).lower(), r"pre-?regist")
-        self.assertIn("fixed before candidate results were inspected", texts[0])
+    def test_normal_generator_module_inventory_is_exact(self) -> None:
+        expected = {
+            "__init__.py",
+            "audit.py",
+            "canonical.py",
+            "cli.py",
+            "environment.py",
+            "errors.py",
+            "model.py",
+            "oracle.py",
+            "provenance.py",
+            "seeds.py",
+            "settings.py",
+            "transaction.py",
+            "user_workflow.py",
+            "validation.py",
+        }
+        package = ROOT / "src/simple_synthetic_eeg_generator"
+        self.assertEqual({path.name for path in package.glob("*.py")}, expected)
 
     def test_name_only_audit_rejects_ignored_eeg_and_output_without_reading_contents(self) -> None:
         for relative in ("ignored.set", "outputs/report.txt"):

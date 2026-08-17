@@ -10,7 +10,7 @@ from typing import Sequence
 from .errors import GeneratorError
 from .seeds import derive_seed
 from .settings import load_settings
-from .reproducibility import generate_reproducibly
+from .transaction import build_array_stage
 
 
 def parser() -> argparse.ArgumentParser:
@@ -24,11 +24,9 @@ def parser() -> argparse.ArgumentParser:
     seed.add_argument("--subject", required=True)
     seed.add_argument("--stream", required=True)
 
-    generate = subcommands.add_parser("generate", help="build a new immutable canonical-array stage")
+    generate = subcommands.add_parser("generate", help="build and validate one new array stage")
     generate.add_argument("--settings", type=Path, required=True)
-    generate.add_argument("--lock-file", type=Path, required=True)
     generate.add_argument("--source-root", type=Path, required=True)
-    generate.add_argument("--simple-commit", required=True)
     generate.add_argument("--output", type=Path, required=True)
     return root
 
@@ -57,12 +55,10 @@ def run(arguments: Sequence[str] | None = None) -> int:
         return 0
     if args.command == "generate":
         settings = load_settings(args.settings)
-        output = generate_reproducibly(
+        output = build_array_stage(
             output=args.output,
             settings=settings,
-            lock_file=args.lock_file,
             source_root=args.source_root,
-            simple_commit=args.simple_commit,
         )
         print(output)
         return 0

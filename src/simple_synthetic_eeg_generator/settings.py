@@ -1,4 +1,4 @@
-"""Load and enforce the exact approved generator settings."""
+"""Load and enforce the approved scientific recipe and input contract."""
 
 from __future__ import annotations
 
@@ -12,10 +12,11 @@ from .canonical import canonical_json_bytes
 from .errors import ContractError
 from .seeds import DOMAIN, MASTER_SEED, MASTER_SEED_HEX
 
-SCHEMA = "simple-synthetic-generator-settings-v2"
+SCHEMA = "simple-synthetic-generator-settings-v3"
 EXPECTED_SUBJECTS = tuple(f"{index:03d}" for index in range(1, 32))
-SIMPLE_COMMIT = "e4843b858131d7d6e019740de24f44ade12bc813"
-FROZEN_CANONICAL_SHA256 = "44b776635e010dfffa874260d340c6ea38d7e7e142bf78bf1b3b50ca68c14ae7"
+SIMPLE_INPUT_CONTRACT = "simple-synthetic-input-v1"
+TESTED_SIMPLE_COMMIT = "e4843b858131d7d6e019740de24f44ade12bc813"
+RECIPE_SHA256 = "c6e99c4e843a656348064c33a93ed4d64766bec3511a5aec54fccf3b9744228f"
 
 
 @dataclass(frozen=True)
@@ -51,7 +52,16 @@ def validate_frozen_settings(values: dict[str, Any]) -> None:
 
     _require_keys(
         values,
-        {"schema", "build", "dataset", "environment", "provenance", "seed", "signal", "validation"},
+        {
+            "schema",
+            "build",
+            "compatibility",
+            "dataset",
+            "provenance",
+            "seed",
+            "signal",
+            "validation",
+        },
         "top-level settings",
     )
     _require_equal(values["schema"], SCHEMA, "schema")
@@ -74,34 +84,21 @@ def validate_frozen_settings(values: dict[str, Any]) -> None:
     _require_equal(seed["digest"], "SHA-256", "seed digest")
     _require_equal(seed["numpy_bit_generator"], "PCG64DXSM", "NumPy bit generator")
 
-    environment = values["environment"]
+    compatibility = values["compatibility"]
     _require_keys(
-        environment,
-        {
-            "eeglab",
-            "matlab",
-            "matplotlib",
-            "neurodsp",
-            "numpy",
-            "operating_system",
-            "platform_machine",
-            "python",
-            "scipy",
-            "simple_commit",
-        },
-        "environment settings",
+        compatibility,
+        {"simple_input_contract", "tested_simple_commit"},
+        "compatibility settings",
     )
-    _require_equal(environment["python"], "3.13.6", "Python")
-    _require_equal(environment["neurodsp"], "2.3.0", "NeuroDSP")
-    _require_equal(environment["numpy"], "2.2.2", "NumPy")
-    _require_equal(environment["scipy"], "1.15.1", "SciPy")
-    _require_equal(environment["matplotlib"], "3.10.0", "Matplotlib")
-    _require_equal(environment["matlab"], "26.1.0.3312084 (R2026a) Update 4", "MATLAB")
-    _require_equal(environment["eeglab"], "2026.0.0", "EEGLAB")
     _require_equal(
-        environment["simple_commit"],
-        SIMPLE_COMMIT,
-        "simple commit",
+        compatibility["simple_input_contract"],
+        SIMPLE_INPUT_CONTRACT,
+        "SIMPLE input contract",
+    )
+    _require_equal(
+        compatibility["tested_simple_commit"],
+        TESTED_SIMPLE_COMMIT,
+        "tested SIMPLE commit",
     )
 
     signal = values["signal"]
@@ -152,9 +149,9 @@ def load_settings(path: Path) -> FrozenSettings:
         raise ContractError("Settings root must be a JSON object")
     validate_frozen_settings(values)
     actual_digest = hashlib.sha256(canonical_json_bytes(values)).hexdigest()
-    if actual_digest != FROZEN_CANONICAL_SHA256:
+    if actual_digest != RECIPE_SHA256:
         raise ContractError(
-            "Settings differ from the complete approved canonical freeze: "
-            f"expected {FROZEN_CANONICAL_SHA256}, got {actual_digest}"
+            "Settings differ from the complete approved scientific recipe: "
+            f"expected {RECIPE_SHA256}, got {actual_digest}"
         )
     return FrozenSettings(source_path=path, values=values)

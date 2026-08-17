@@ -54,73 +54,85 @@ The CSV deliberately stores repository-relative `data/raw/...` paths. Those
 paths become valid after the manual copy. Do not commit the generated inputs
 to the `simple` repository.
 
-The generated metadata records the required `simple` source commit:
-`e4843b858131d7d6e019740de24f44ade12bc813`.
+The generated metadata records the `simple` input contract and the `simple`
+commit against which this dataset design was tested. This is provenance for
+the tutorial dataset, not a check that prevents the data being used with a
+different `simple` commit.
 
 ## One-time prerequisites
 
-The command checks prerequisites and stops with an error if any differ. It
-never installs, upgrades or downloads anything.
+The command is currently supported on macOS. It uses compatible installed
+software and does not install or upgrade that software. EEGLAB may perform
+its normal startup checks for plugin-version notices. You need:
 
-Before the comparatively expensive Python build begins, it starts MATLAB once
-to confirm the exact licensed MATLAB build, pinned EEGLAB source hashes and
-native EEGLAB initialisation. Packaging later runs in a separate clean MATLAB
-process.
+- Python 3.10 or later;
+- a checkout-local Python virtual environment at `.venv` with this project
+  installed;
+- MATLAB installed under `/Applications`;
+- EEGLAB installed under `Documents/MATLAB`; and
+- a licensed MATLAB session able to start EEGLAB and save and reload a native
+  one-file `.set` dataset.
 
-- macOS 26.6.1 on Apple silicon;
-- Python 3.13.6 at the reviewed Homebrew interpreter identity;
-- a checkout-local `.venv/bin/python` containing exactly the 19 distributions
-  in `requirements/producing.lock`;
-- MATLAB R2026a Update 4 installed as
-  `/Applications/MATLAB_R2026a.app`; and
-- EEGLAB 2026.0.0 installed in the current user's default folder
-  `Documents/MATLAB/eeglab2026.0.0`.
-
-For a new checkout, create the environment once with the reviewed Python and
-the hash-pinned lock:
+Create the Python environment once from the repository root:
 
 ```sh
-/opt/homebrew/opt/python@3.13/bin/python3.13 -m venv .venv
-./.venv/bin/python -m pip install --require-hashes \
-  -r requirements/producing.lock
+python3 -m venv .venv
+./.venv/bin/python -m pip install .
 ```
 
-This setup is intentionally manual. The normal dataset command never changes
-the Python, MATLAB or EEGLAB installation.
+If a later Python update invalidates the existing virtual environment, remove
+that `.venv` directory and run these two setup commands again.
+
+The reference-tested environment uses macOS on Apple silicon, MATLAB R2026a
+Update 4, EEGLAB 2026.0.0, Python 3.13.6, NumPy 2.2.2, SciPy 1.15.1,
+NeuroDSP 2.3.0 and Matplotlib 3.10.0. These exact versions are not required.
+At runtime the generator selects installed MATLAB and EEGLAB versions, checks
+the capabilities it actually needs, and records the versions used in every
+generated `.set` file. This capability check covers dataset generation; it
+does not certify every function in the `simple` workflow.
+
+If several conventional installations exist, the newest recognised MATLAB
+and EEGLAB installations are selected and printed before generation. For a
+nonstandard installation, advanced users can set
+`SIMPLE_SYNTH_MATLAB_EXECUTABLE` and `SIMPLE_SYNTH_EEGLAB_ROOT` to canonical,
+non-symlink paths before running the same normal command.
 
 ## What the one command does internally
 
 The entry point runs the full fail-closed production process:
 
-1. audits the clean Git checkout, frozen settings and dependency lock, then
-   preflights the exact native MATLAB/EEGLAB runtime;
-2. builds the fixed arrays in three fresh Python processes—two canonical and
-   one shuffled—and requires byte-identical results;
-3. launches the exact MATLAB application and uses native EEGLAB 2026.0.0 to
-   save, reload and verify each one-file dataset;
-4. constructs a hidden transfer partial containing only `dataset_list.csv`
+1. audits the clean Git checkout and fixed scientific recipe, then selects the
+   installed MATLAB and EEGLAB runtimes;
+2. uses a tiny temporary dataset to prove that EEGLAB can initialise and save
+   and reload the required native one-file format without an `.fdt` sidecar;
+3. generates and scientifically validates the fixed 31-subject tutorial
+   signals once;
+4. launches MATLAB and uses native EEGLAB to save, reload and verify every
+   one-file dataset;
+5. constructs a hidden transfer partial containing only `dataset_list.csv`
    and `raw/`;
-5. checks the exact 31-subject hierarchy, CSV/file bijection, ordinary-file
+6. checks the exact 31-subject hierarchy, CSV/file bijection, ordinary-file
    boundary, absence of symlinks and sidecars, and zero `.fdt` files;
-6. removes the rich array and packaging intermediates; and
-7. exclusively and atomically promotes the minimal transfer folder.
+7. removes the rich array and packaging intermediates; and
+8. exclusively and atomically promotes the minimal transfer folder.
 
 Internal array stages, manifests, receipts, parameter tables and packaging
 scaffolds are validation machinery, not user outputs. They use unique hidden
 siblings and are removed before success. The durable scientific recipe and
 rights/citation records remain versioned in this repository, while each `.set`
-embeds its synthetic identity and source-commit metadata.
+embeds its synthetic identity, tested `simple` contract, recipe digest and
+actual runtime versions.
 
 Low-level Python and MATLAB entry points remain available to maintainers for
 testing and auditing, but they are not the normal user interface.
 
-## Frozen scientific contract
+## Scientific contract
 
 - subjects `001` through `031`; session `01`; run `01`;
 - one 30.000-second recording (30,000 samples) per subject at 1,000 Hz;
 - one exact channel `Cz`, simulated relative to a synthetic common reference;
 - one exact `stimulus` event at 15.000 seconds (EEGLAB latency 15001);
-- direct NeuroDSP 2.3.0 `sim_powerlaw` background, explicitly demeaned and
+- a NeuroDSP `sim_powerlaw` background, explicitly demeaned and
   sample-SD normalised before microvolt scaling;
 - neutral Gaussian early-negative and late-positive event components;
 - phase-randomised Tukey-windowed 9–11-Hz tutorial oscillation;
@@ -160,12 +172,18 @@ folder.
 
 ## Validation boundary
 
-All prospectively frozen gates live in `config/generator_settings.json` and
-were fixed before candidate results were inspected; executable checks live in
-`validation.py`. They test deterministic construction,
-structure, finite values, background slope, declared component support,
+The fixed recipe and validation gates live in
+`config/generator_settings.json`; executable checks live in `validation.py`.
+They test seeded construction, structure, finite values, background slope,
+declared component support,
 untuned response and oscillation contrasts, and the sole subject-31 outlier.
 They do not use NRF outputs, inferential results or a desired conclusion.
+
+Fixed seeds make runs repeatable within ordinary numerical-library behaviour,
+but byte-identical files across different compatible Python, MATLAB or EEGLAB
+versions are not required. The scientific and structural checks, followed by
+native save/reload verification of every dataset, determine whether a build is
+accepted.
 
 Screening remains manual. The generator never writes an exclusion decision.
 If subject 31 is not the only visually accepted exclusion, stop and document a

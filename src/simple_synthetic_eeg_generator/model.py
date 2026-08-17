@@ -1,6 +1,6 @@
 """Frozen procedural signal construction.
 
-Production background generation calls NeuroDSP 2.3.0 directly. No fallback,
+Production background generation calls NeuroDSP directly. No fallback,
 mock, or alternate coloured-noise implementation exists in this module.
 """
 
@@ -49,7 +49,7 @@ def _np():
     try:
         import numpy as np
     except ImportError as exc:
-        raise ContractError("The locked NumPy dependency is required") from exc
+        raise ContractError("NumPy with the required generator capabilities is required") from exc
     return np
 
 
@@ -122,7 +122,7 @@ def discrete_tukey(length: int, alpha: float):
     try:
         from scipy.signal.windows import tukey
     except ImportError as exc:
-        raise ContractError("The locked SciPy dependency is required for the Tukey window") from exc
+        raise ContractError("SciPy with a symmetric Tukey window is required") from exc
     return np.asarray(tukey(length, alpha=alpha, sym=True), dtype=np.float64)
 
 
@@ -231,7 +231,7 @@ def generate_neurodsp_background(duration: float, sample_rate: int, exponent: fl
         try:
             from neurodsp.sim import set_random_seed, sim_powerlaw
         except ImportError as exc:
-            raise ContractError("NeuroDSP 2.3.0 is required; no fallback is permitted") from exc
+            raise ContractError("NeuroDSP with sim_powerlaw is required; no fallback is permitted") from exc
         set_random_seed(seed32)
         raw = sim_powerlaw(duration, sample_rate, exponent=-float(exponent))
     finally:

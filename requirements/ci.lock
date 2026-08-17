@@ -1,3 +1,4 @@
+# CI-only tested dependency snapshot. The normal generator does not read this file.
 --require-hashes
 --only-binary=:all:
 

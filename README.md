@@ -4,22 +4,61 @@ This repository creates one fixed, wholly synthetic demonstration dataset for
 the SIMPLE tutorial. It contains the generator code, not generated EEG data.
 Every identifier and sample is synthetic and corresponds to no real person.
 
-## Normal use
+## First-time setup
 
-From the root of a clean checkout, run exactly:
+The generator is currently supported on macOS. You need:
+
+- Python 3.10 or later;
+- MATLAB installed under `/Applications`;
+- EEGLAB installed under `Documents/MATLAB`; and
+- a licensed MATLAB session able to start EEGLAB and save and reload a native
+  one-file `.set` dataset.
+
+From the root of a fresh checkout, copy and run this one setup command:
 
 ```sh
-./generate_dataset <existing-parent-directory>
+./setup_environment
 ```
 
-For example:
+The command creates the checkout-local `.venv` and installs the required
+Python packages into it. It does not alter the system Python, MATLAB or EEGLAB,
+and it does not build the generator package inside the checkout. You do not
+need to activate the environment. If setup is interrupted, run the same
+command again; no manual cleanup is needed.
+
+The reference-tested environment uses macOS on Apple silicon, MATLAB R2026a
+Update 4, EEGLAB 2026.0.0, Python 3.13.6, NumPy 2.2.2, SciPy 1.15.1,
+NeuroDSP 2.3.0 and Matplotlib 3.10.0. These exact versions are not required.
+At runtime the generator selects installed MATLAB and EEGLAB versions, checks
+the capabilities it actually needs, and records the versions used in every
+generated `.set` file. This capability check covers dataset generation; it
+does not certify every function in the `simple` workflow.
+
+If several conventional installations exist, the newest recognised MATLAB
+and EEGLAB installations are selected and printed before generation. For a
+nonstandard installation, advanced users can set
+`SIMPLE_SYNTH_MATLAB_EXECUTABLE` and `SIMPLE_SYNTH_EEGLAB_ROOT` to canonical,
+non-symlink paths before running the generation command.
+
+## Create the dataset
+
+Remain in the repository root. To create the dataset alongside the generator
+checkout, copy and run:
+
+```sh
+./generate_dataset "$(cd .. && pwd -P)"
+```
+
+The shell expression supplies the canonical absolute path of the directory
+containing the checkout. To use a different existing parent directory outside
+every Git worktree, replace it with that directory's absolute path:
 
 ```sh
 ./generate_dataset /path/to/existing-parent
 ```
 
-The argument is the only user choice. The command always creates the fixed
-leaf directory `simple-synthetic-eeg-demo`; subject count, signal recipe,
+The parent directory is the only user choice. The command always creates the
+fixed leaf directory `simple-synthetic-eeg-demo`; subject count, signal recipe,
 filenames, metadata and validation are not configurable.
 
 On success the selected parent contains exactly:
@@ -43,8 +82,8 @@ unique hidden transient siblings and does not publish a partial dataset.
 
 ## Install the generated data into `simple`
 
-The generator never reads, writes or locates `simple`. After a
-successful build, the user manually copies these two entries:
+The generator never reads, writes or locates `simple`. After a successful
+build, the user manually copies these two entries:
 
 - `simple-synthetic-eeg-demo/raw/` to `simple/data/raw/`;
 - `simple-synthetic-eeg-demo/dataset_list.csv` to
@@ -60,45 +99,7 @@ commit against which this dataset design was tested. The tested commit is
 tutorial dataset, not a check that prevents the data being used with a
 different `simple` commit.
 
-## One-time prerequisites
-
-The command is currently supported on macOS. It uses compatible installed
-software and does not install or upgrade that software. EEGLAB may perform
-its normal startup checks for plugin-version notices. You need:
-
-- Python 3.10 or later;
-- a checkout-local Python virtual environment at `.venv` with this project
-  installed;
-- MATLAB installed under `/Applications`;
-- EEGLAB installed under `Documents/MATLAB`; and
-- a licensed MATLAB session able to start EEGLAB and save and reload a native
-  one-file `.set` dataset.
-
-Create the Python environment once from the repository root:
-
-```sh
-python3 -m venv .venv
-./.venv/bin/python -m pip install .
-```
-
-If a later Python update invalidates the existing virtual environment, remove
-that `.venv` directory and run these two setup commands again.
-
-The reference-tested environment uses macOS on Apple silicon, MATLAB R2026a
-Update 4, EEGLAB 2026.0.0, Python 3.13.6, NumPy 2.2.2, SciPy 1.15.1,
-NeuroDSP 2.3.0 and Matplotlib 3.10.0. These exact versions are not required.
-At runtime the generator selects installed MATLAB and EEGLAB versions, checks
-the capabilities it actually needs, and records the versions used in every
-generated `.set` file. This capability check covers dataset generation; it
-does not certify every function in the `simple` workflow.
-
-If several conventional installations exist, the newest recognised MATLAB
-and EEGLAB installations are selected and printed before generation. For a
-nonstandard installation, advanced users can set
-`SIMPLE_SYNTH_MATLAB_EXECUTABLE` and `SIMPLE_SYNTH_EEGLAB_ROOT` to canonical,
-non-symlink paths before running the same normal command.
-
-## What the one command does internally
+## What the generation command does internally
 
 The entry point runs the full fail-closed production process:
 

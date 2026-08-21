@@ -17,11 +17,14 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-      - name: Install the CI-only tested dependency snapshot
-        run: python -m pip install --require-hashes -r requirements/ci.lock
-      - name: Install this checkout without changing that snapshot
-        run: python -m pip install --no-deps --no-build-isolation .
-      - run: python -m pytest
+      - name: Run the normal setup without source-tree packaging artefacts
+        run: |
+          ./setup_environment
+          test ! -e build
+          test ! -e src/simple_synthetic_eeg_generator.egg-info
+      - name: Apply the CI-only tested dependency snapshot
+        run: ./.venv/bin/python -m pip install --require-hashes -r requirements/ci.lock
+      - run: ./.venv/bin/python -m pytest
       - name: Reject generated EEG and workflow artefacts
         run: |
           if git ls-files | grep -E '\.(set|fdt|f32le|mat|log|diary)$'; then

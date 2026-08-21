@@ -97,7 +97,12 @@ class SourceBoundaryTests(unittest.TestCase):
                 or "__pycache__" in path.parts
                 or (
                     path.suffix.lower() not in text_suffixes
-                    and path.name not in {".gitignore", "LICENSE", "generate_dataset"}
+                    and path.name not in {
+                        ".gitignore",
+                        "LICENSE",
+                        "generate_dataset",
+                        "setup_environment",
+                    }
                 )
             ):
                 continue
@@ -111,11 +116,56 @@ class SourceBoundaryTests(unittest.TestCase):
         workflow = (ROOT / "src/simple_synthetic_eeg_generator/user_workflow.py").read_text(
             encoding="utf-8"
         )
-        self.assertIn("./generate_dataset <existing-parent-directory>", readme)
+        self.assertIn('./generate_dataset "$(cd .. && pwd -P)"', readme)
         self.assertIn(f"`{TESTED_SIMPLE_COMMIT}`", readme)
         self.assertIn("simple-synthetic-eeg-demo", workflow)
         self.assertNotIn("simple/data", workflow)
         self.assertNotIn("simple/data", launcher)
+
+    def test_setup_entrypoint_installs_only_runtime_requirements(self) -> None:
+        setup = ROOT / "setup_environment"
+        setup_text = setup.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        runtime_requirements = (
+            ROOT / "requirements/runtime.txt"
+        ).read_text(encoding="utf-8")
+
+        self.assertTrue(os.access(setup, os.X_OK))
+        self.assertIn(
+            '"$generator_python" -m pip install --disable-pip-version-check',
+            setup_text,
+        )
+        self.assertIn('--requirement "$runtime_requirements"', setup_text)
+        syntax = subprocess.run(
+            ["/bin/sh", "-n", str(setup), str(ROOT / "generate_dataset")],
+            check=False,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        self.assertEqual(syntax.returncode, 0, syntax.stderr)
+        self.assertNotIn("pip install .", setup_text)
+        self.assertNotIn("pip install .", readme)
+        self.assertIn("```sh\n./setup_environment\n```", readme)
+        self.assertIn(
+            '```sh\n./generate_dataset "$(cd .. && pwd -P)"\n```',
+            readme,
+        )
+
+        dependency_block = pyproject.split("dependencies = [", 1)[1].split("]", 1)[0]
+        declared_dependencies = {
+            line.strip().rstrip(",").strip('"')
+            for line in dependency_block.splitlines()
+            if line.strip()
+        }
+        setup_dependencies = {
+            line.strip()
+            for line in runtime_requirements.splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        }
+        self.assertEqual(setup_dependencies, declared_dependencies)
 
     def test_native_preflight_and_packager_share_capability_validator(self) -> None:
         preflight = (ROOT / "matlab/preflight_environment.m").read_text(encoding="utf-8")

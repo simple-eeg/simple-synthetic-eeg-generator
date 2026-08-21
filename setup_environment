@@ -1,0 +1,29 @@
+#!/bin/sh
+# Create or repair the checkout-local Python environment without building this checkout.
+
+set -eu
+
+generator_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+generator_environment="$generator_root/.venv"
+generator_python="$generator_environment/bin/python"
+runtime_requirements="$generator_root/requirements/runtime.txt"
+
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "Python 3 was not found; install Python 3.10 or newer, then run ./setup_environment again" >&2
+    exit 2
+fi
+if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)'; then
+    echo "Python 3.10 or newer is required" >&2
+    exit 2
+fi
+if [ -L "$generator_environment" ] || { [ -e "$generator_environment" ] && [ ! -d "$generator_environment" ]; }; then
+    echo ".venv must be an ordinary directory inside this checkout" >&2
+    exit 2
+fi
+
+echo "Creating or repairing the checkout-local Python environment..."
+python3 -m venv "$generator_environment"
+echo "Installing the generator's Python runtime requirements..."
+"$generator_python" -m pip install --disable-pip-version-check \
+    --requirement "$runtime_requirements"
+echo "Setup complete. The generator environment is ready."

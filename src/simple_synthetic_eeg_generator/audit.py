@@ -53,7 +53,7 @@ ALLOWED_IGNORED_CACHE_COMPONENTS = {"__pycache__", ".pytest_cache", ".ruff_cache
 ALLOWED_IGNORED_FILE_NAMES = {".coverage", ".DS_Store"}
 FORBIDDEN_OUTPUT_COMPONENTS = {"data", "outputs", "provenance", "build", "dist"}
 ALLOWED_SUFFIXES = {".cff", ".in", ".json", ".lock", ".m", ".md", ".py", ".toml", ".txt", ".yaml", ".yml"}
-SPECIAL_NAMES = {".gitignore", "LICENSE", "generate_dataset"}
+SPECIAL_NAMES = {".gitignore", "LICENSE", "generate_dataset", "setup_environment"}
 FORBIDDEN_SOURCE_PATH_TEXT = (
     "/" + "Users" + "/",
     "/" + "Volumes" + "/",

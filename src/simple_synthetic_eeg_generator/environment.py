@@ -25,7 +25,7 @@ def validate_project_interpreter(source_root: Path) -> None:
     interpreter = binary_directory / "python"
     if virtual_environment.is_symlink() or not virtual_environment.is_dir():
         raise EnvironmentCapabilityError(
-            "The checkout-local .venv is absent or is a symlink; recreate it as described in README.md"
+            "The checkout-local .venv is absent or is a symlink; run ./setup_environment again"
         )
     if binary_directory.is_symlink() or not binary_directory.is_dir():
         raise EnvironmentCapabilityError("The checkout-local .venv/bin directory is invalid")

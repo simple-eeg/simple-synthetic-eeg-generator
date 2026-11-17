@@ -4,6 +4,8 @@ This repository creates one fixed, wholly synthetic demonstration dataset for
 the SIMPLE tutorial. It contains the generator code, not generated EEG data.
 Every identifier and sample is synthetic and corresponds to no real person.
 
+**Software credits:** [Marianne van der Vaart](https://github.com/mvandervaart), [Simon Marchant](https://github.com/simonmarchant), and [Luke Baxter](https://github.com/lukebax) contributed equally to the development of this software.
+
 ## First-time setup
 
 The generator is currently supported on macOS. You need:
@@ -61,7 +63,7 @@ The parent directory is the only user choice. The command always creates the
 fixed leaf directory `simple-synthetic-eeg-demo`; subject count, signal recipe,
 filenames, metadata and validation are not configurable.
 
-On success the selected parent contains exactly:
+On success, the command creates this folder in the selected parent:
 
 ```text
 simple-synthetic-eeg-demo/
@@ -169,13 +171,13 @@ around the sole `sim_powerlaw` call; the previous global state is restored.
 Every component's internal provenance uses the complete applicable causal
 seed list in the fixed stream order. The deterministic artefact has no causal
 seed; composite and staged rows contain all nine digests. These records are
-validated during production and are not added as clutter to the final transfer
-folder.
+validated during generation and omitted from the final transfer folder.
 
 ## Validation boundary
 
 The fixed recipe and validation gates live in
-`config/generator_settings.json`; executable checks live in `validation.py`.
+`config/generator_settings.json`; executable checks live in
+[validation.py](src/simple_synthetic_eeg_generator/validation.py).
 They test seeded construction, structure, finite values, background slope,
 declared component support,
 untuned response and oscillation contrasts, and the sole subject-31 outlier.

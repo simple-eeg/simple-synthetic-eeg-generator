@@ -12,7 +12,7 @@ seconds (EEGLAB latency 15001). Subject 31 alone contains the declared smooth
 No exclusion is pre-filled; screening is manual.
 
 The generator validates the recipe, seeds, realised parameters, component
-structure, dataset-list rows and native file round trips before publication.
+structure, dataset-list rows, and native file round trips before completing a build.
 Each `.set` records the generator commit, tested `simple` input contract,
 recipe digest and actual Python, numerical-library, MATLAB and EEGLAB versions
 used to create it. Rich build receipts and manifests are internal validation

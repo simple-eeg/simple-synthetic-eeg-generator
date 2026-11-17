@@ -1,5 +1,6 @@
 function tests = test_packaging_helpers_runtime
-% Isolated MATLAB-only adversarial tests. No workflow or EEG data is read.
+% Isolated MATLAB-only tests using temporary synthetic fixtures.
+% No participant EEG or existing workflow data is read.
 tests = functiontests(localfunctions);
 end
 

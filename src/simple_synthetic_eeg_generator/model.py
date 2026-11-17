@@ -217,7 +217,7 @@ def analytic_components(
 
 
 def generate_neurodsp_background(duration: float, sample_rate: int, exponent: float, seed32: int):
-    """Call the frozen NeuroDSP implementation once and restore legacy RNG state."""
+    """Call NeuroDSP once and restore the legacy RNG state."""
 
     np = _np()
     state = np.random.get_state()

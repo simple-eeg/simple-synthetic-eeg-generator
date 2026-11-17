@@ -1,6 +1,7 @@
 %% Preflight the MATLAB and EEGLAB capabilities used by native packaging
 % This creates and removes one tiny wholly synthetic fixture in the system
-% temporary directory. It performs no signal generation or workflow write.
+% temporary directory. It does not generate the tutorial dataset or write
+% workflow outputs.
 
 clearvars;
 

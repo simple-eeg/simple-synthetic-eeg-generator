@@ -28,6 +28,11 @@ folder outside any existing Git repository, then run:
 ```sh
 git clone https://github.com/simple-eeg/simple-synthetic-eeg-generator.git
 cd simple-synthetic-eeg-generator
+```
+
+Then set up the Python environment:
+
+```sh
 ./setup_environment
 ```
 

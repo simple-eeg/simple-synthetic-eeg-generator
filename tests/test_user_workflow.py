@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
+import venv
 from pathlib import Path
 from unittest import mock
 
@@ -107,6 +111,33 @@ def make_runtime() -> RuntimePaths:
 
 
 class UserWorkflowTests(unittest.TestCase):
+    def test_launcher_waits_for_child_and_preserves_failure_status(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve() / "launcher with spaces"
+            root.mkdir()
+            shutil.copyfile(ROOT / "generate_dataset", root / "generate_dataset")
+            venv.EnvBuilder(with_pip=False).create(root / ".venv")
+            (root / "tools").mkdir()
+            marker = root / "finished.txt"
+            child = root / "tools" / "run_dataset_generator.py"
+            child.write_text(
+                "import pathlib,sys,time\n"
+                "time.sleep(0.2)\n"
+                "pathlib.Path(sys.argv[1]).write_text('finished', encoding='utf-8')\n"
+                "print('child finished', flush=True)\n"
+                "raise SystemExit(7)\n",
+                encoding="utf-8",
+            )
+            output = root / "output.txt"
+            with output.open("w", encoding="utf-8") as stream:
+                result = subprocess.run(
+                    [sys.executable, str(root / "generate_dataset"), str(marker)],
+                    stdout=stream, stderr=subprocess.STDOUT, check=False, timeout=30,
+                )
+            self.assertEqual(result.returncode, 7)
+            self.assertEqual(marker.read_text(encoding="utf-8"), "finished")
+            self.assertIn("child finished", output.read_text(encoding="utf-8"))
+
     def test_root_launcher_is_executable_and_exposes_one_positional_choice(self) -> None:
         launcher = ROOT / "generate_dataset"
         self.assertTrue(os.access(launcher, os.X_OK))

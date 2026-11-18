@@ -239,11 +239,14 @@ Low-level Python and MATLAB entry points remain available to maintainers for
 testing and auditing; they are not the normal user interface.
 
 Maintainers can run the **MATLAB and EEGLAB validation** workflow from this
-repository's GitHub **Actions** tab. It runs the MATLAB tests and generates a
-temporary example on macOS, Windows, and Linux, including native save/reload
-verification of all 31 recordings. It uses MATLAB R2026a Update 4 and EEGLAB
-2026.0.0, and does not change the shared dataset. The Windows run reports the
-Unix file-permission test as skipped.
+repository's GitHub **Actions** tab. It runs the MATLAB tests and each stage of
+the generator on macOS, Windows, and Linux: signal generation, native save/reload
+verification of all 31 recordings, and preparation of the final transfer folder.
+It uses MATLAB R2026a Update 4 and EEGLAB 2026.0.0. All output is temporary; the
+shared dataset is unchanged. The Windows run reports the Unix file-permission
+test as skipped. GitHub's MATLAB licence requires the MATLAB stages to run
+through MathWorks' action, so this workflow tests the stages separately rather
+than invoking the one-command launcher.
 
 ## Licensing and release
 

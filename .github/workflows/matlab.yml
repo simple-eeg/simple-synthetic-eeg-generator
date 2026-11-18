@@ -57,10 +57,16 @@ jobs:
           if executable is None:
               raise RuntimeError("Setup MATLAB did not provide a MATLAB executable on PATH")
           matlab = Path(executable).resolve(strict=True)
+          root = (Path(os.environ["GITHUB_WORKSPACE"]) / "project").resolve(strict=True)
           eeglab = (Path(os.environ["GITHUB_WORKSPACE"]) / "eeglab").resolve(strict=True)
+          parent = Path(os.environ["RUNNER_TEMP"]).resolve(strict=True) / "simple-generator-validation"
+          parent.mkdir()
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as stream:
               stream.write("SIMPLE_SYNTH_MATLAB_EXECUTABLE=" + str(matlab) + "\n")
               stream.write("SIMPLE_SYNTH_EEGLAB_ROOT=" + str(eeglab) + "\n")
+              stream.write("SIMPLE_SYNTH_GENERATOR_ROOT=" + str(root) + "\n")
+              stream.write("SIMPLE_SYNTH_INPUT_ROOT=" + str(parent / "arrays") + "\n")
+              stream.write("SIMPLE_SYNTH_OUTPUT_ROOT=" + str(parent / "bundle") + "\n")
       - name: Run MATLAB and native EEGLAB tests
         uses: matlab-actions/run-command@v3
         with:
@@ -75,22 +81,61 @@ jobs:
             if ispc, assert(all(endsWith(skipped, '/testReadOnlyInputTreeRemainsConsumable')), 'Unexpected skipped MATLAB tests.');
             else, assert(isempty(skipped), 'MATLAB tests were skipped.'); end;
             fprintf('MATLAB tests: %d passed, %d skipped.\n', nnz([results.Passed]), nnz([results.Incomplete]));
-      - name: Generate and verify the complete synthetic example
-        if: ${{ !cancelled() }}
+      - name: Check MATLAB and EEGLAB capabilities
         uses: matlab-actions/run-command@v3
         with:
           command: >-
-            root = fullfile(getenv('GITHUB_WORKSPACE'), 'project');
-            cd(root);
-            addpath(fullfile(root, 'matlab'));
-            parent = char(java.io.File(fullfile(getenv('RUNNER_TEMP'), 'simple-generator-validation')).getCanonicalPath());
-            assert(~isfolder(parent), 'Synthetic validation folder already exists.');
-            mkdir(parent);
-            [status, output] = run_command(getenv('SIMPLE_SYNTH_PYTHON'), [string(fullfile(root, 'generate_dataset')), string(parent)]);
-            fprintf('%s', output);
-            assert(status == 0, 'End-to-end generation or native verification failed.');
-            generated = fullfile(parent, 'simple-synthetic-eeg-demo');
-            recordings = dir(fullfile(generated, 'raw', '**', '*.set'));
-            assert(numel(recordings) == 31 && isfile(fullfile(generated, 'dataset_list.csv')), 'Generated dataset inventory differs.');
-            assert(isempty(dir(fullfile(generated, '**', '*.fdt'))), 'Unexpected separate EEG data files.');
-            fprintf('End-to-end generation passed: 31 native recordings saved, reloaded, and verified by the generator.\n');
+            cd(fullfile(getenv('SIMPLE_SYNTH_GENERATOR_ROOT'), 'matlab'));
+            run('preflight_environment.m');
+      - name: Generate and validate the synthetic arrays
+        shell: python
+        run: |
+          import os
+          import subprocess
+          from pathlib import Path
+          root = Path(os.environ["SIMPLE_SYNTH_GENERATOR_ROOT"])
+          subprocess.run([
+              os.environ["SIMPLE_SYNTH_PYTHON"], "-I", str(root / "tools" / "run_generator.py"),
+              "generate", "--settings", str(root / "config" / "generator_settings.json"),
+              "--source-root", str(root), "--output", os.environ["SIMPLE_SYNTH_INPUT_ROOT"],
+          ], check=True)
+      - name: Package and reload all 31 native recordings
+        uses: matlab-actions/run-command@v3
+        with:
+          command: >-
+            addpath(getenv('SIMPLE_SYNTH_EEGLAB_ROOT'));
+            eeglab('nogui');
+            cd(fullfile(getenv('SIMPLE_SYNTH_GENERATOR_ROOT'), 'matlab'));
+            run('package_and_verify_eeglab.m');
+      - name: Finalize and verify the transfer folder
+        shell: python
+        run: |
+          import os
+          import subprocess
+          code = """
+          import os
+          import sys
+          from pathlib import Path
+          root = Path(os.environ["SIMPLE_SYNTH_GENERATOR_ROOT"])
+          sys.path.insert(0, str(root / "src"))
+          from simple_synthetic_eeg_generator.user_workflow import (
+              FINAL_NAME, _copy_transfer, _default_reauditor, discover_runtime,
+              validate_packaged_stage, validate_transfer_bundle,
+          )
+          from simple_synthetic_eeg_generator.transaction import exclusive_atomic_rename
+          runtime = discover_runtime(root)
+          packaged = Path(os.environ["SIMPLE_SYNTH_OUTPUT_ROOT"])
+          transfer = packaged.parent / "transfer"
+          final = packaged.parent / FINAL_NAME
+          validate_packaged_stage(packaged)
+          transfer.mkdir()
+          _copy_transfer(packaged, transfer)
+          validate_packaged_stage(packaged)
+          validate_transfer_bundle(transfer)
+          _default_reauditor(runtime)
+          exclusive_atomic_rename(transfer, final)
+          validate_transfer_bundle(final)
+          print("Component-chain validation passed: 31 native recordings saved, reloaded, and finalized.")
+          """
+          import textwrap
+          subprocess.run([os.environ["SIMPLE_SYNTH_PYTHON"], "-I", "-c", textwrap.dedent(code)], check=True)

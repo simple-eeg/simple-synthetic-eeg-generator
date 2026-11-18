@@ -10,10 +10,27 @@ cleanup = onCleanup(@() remove_output(outputPath));
 builder = java.lang.ProcessBuilder(command);
 builder.redirectErrorStream(true);
 builder.redirectOutput(java.io.File(outputPath));
+if ispc
+    % Java's legacy Windows encoding can discard empty or quoted arguments.
+    previousEncoding = java.lang.System.getProperty('jdk.lang.Process.allowAmbiguousCommands');
+    hadEncoding = java.lang.System.getProperties().containsKey('jdk.lang.Process.allowAmbiguousCommands');
+    encodingCleanup = onCleanup(@() restore_encoding(previousEncoding, hadEncoding));
+    java.lang.System.setProperty('jdk.lang.Process.allowAmbiguousCommands', 'false');
+end
 process = builder.start();
+clear encodingCleanup;
 childCleanup = onCleanup(@() process.destroy());
 status = double(process.waitFor());
 output = fileread(outputPath);
+end
+
+function restore_encoding(previous, wasPresent)
+property = 'jdk.lang.Process.allowAmbiguousCommands';
+if ~wasPresent
+    java.lang.System.clearProperty(property);
+else
+    java.lang.System.setProperty(property, previous);
+end
 end
 
 function remove_output(path)

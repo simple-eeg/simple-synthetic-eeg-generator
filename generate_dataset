@@ -2,6 +2,7 @@
 """Run as: python generate_dataset <existing-parent-directory>."""
 
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -11,8 +12,12 @@ def main():
     python = root / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
     if not python.is_file():
         raise SystemExit("Generator environment is missing; run python setup_environment first")
-    os.execv(str(python), [str(python), "-u", "-I",
-             str(root / "tools/run_dataset_generator.py"), *sys.argv[1:]])
+    command = [str(python), "-u", "-I",
+               str(root / "tools/run_dataset_generator.py"), *sys.argv[1:]]
+    if os.name == "nt":
+        # Windows execv exits before its replacement process finishes.
+        raise SystemExit(subprocess.run(command, check=False).returncode)
+    os.execv(str(python), command)
 
 
 if __name__ == "__main__":

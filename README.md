@@ -7,6 +7,9 @@ sample is synthetic and corresponds to no real person.
 
 **Software credits:** [Luke Baxter](https://github.com/lukebax), [Marianne van der Vaart](https://github.com/mvandervaart), and [Simon Marchant](https://github.com/simonmarchant) contributed to the development of this software.
 
+To try SIMPLE without running this generator, download the
+[ready-made synthetic example](https://github.com/simple-eeg/simple-data/tree/main/synthetic-eeg).
+
 To create the tutorial data, follow the setup, generation, and copying steps
 below. The [dataset design](#dataset-design) describes the signals; the
 [technical reference](#technical-reference) gives implementation and
@@ -38,7 +41,6 @@ your Python command):
 python setup_environment
 ```
 
-If GitHub asks you to sign in, use an account with access to the repository.
 Use a Git clone rather than GitHub's **Download ZIP** option: generation
 requires a clean Git checkout and records its commit. Keep its tracked
 files unchanged, and do not add data or other files to the checkout. The setup
@@ -102,16 +104,17 @@ output location and does not leave a partially completed output dataset.
 ## Copy the data into `simple`
 
 The generator does not locate or change the `simple` repository. After
-generation succeeds, manually copy:
+generation succeeds, create `simple/data/raw/` if needed, then manually copy:
 
-- `simple-synthetic-eeg-demo/raw/` to `simple/data/raw/`; and
+- the contents of `simple-synthetic-eeg-demo/raw/` into `simple/data/raw/`; and
 - `simple-synthetic-eeg-demo/dataset_list.csv` to
   `simple/data_lists/dataset_list.csv`.
 
 The CSV lists paths beginning with `data/raw/`, relative to the `simple`
 repository. These paths become valid after copying. Keep the generated folder
 as the source copy: the tutorial updates the CSV and creates derived files in
-`simple`. Do not commit the generated inputs to Git.
+`simple`. Keep these working inputs out of the `simple` software repository's
+Git history. The shared example is stored in the separate `simple-data` repository.
 
 Continue with the [SIMPLE synthetic tutorial](https://github.com/simple-eeg/simple#synthetic-tutorial).
 
@@ -168,10 +171,11 @@ commands remain `python setup_environment` and `python generate_dataset`.
 The reference build was tested on macOS with Apple silicon, MATLAB R2026a
 Update 4, EEGLAB 2026.0.0, Python 3.13.6, NumPy 2.2.2, SciPy 1.15.1,
 NeuroDSP 2.3.0, and Matplotlib 3.10.0. These exact versions are not required.
-Python tests run on all three operating systems. The full MATLAB/EEGLAB
-workflow has been verified locally on macOS; its native save/reload check also
-runs before generation on your computer. Runtime checks cover this generator,
-not every function in the `simple` workflow.
+Python tests have passed on all three operating systems. Data generation,
+native save/reload, and final folder preparation have also succeeded on
+macOS, Windows, and Linux. The normal one-command workflow has been verified
+locally on macOS. Runtime checks cover this generator, not every function in
+the `simple` workflow.
 
 MATLAB is sought under `/Applications` on macOS, `/usr/local/MATLAB` on Linux,
 and `Program Files/MATLAB` on Windows, then on `PATH`. EEGLAB is sought under

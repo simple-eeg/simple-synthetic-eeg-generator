@@ -378,8 +378,8 @@ assert(isequal(sort(listed), sort(expectedPaths)) && isequal(sort(actual), sort(
 end
 
 function copy_bundle_scaffold(inputRoot, partialRoot)
-names = {'README.md','CITATION.cff','RIGHTS_AUTHORITY_CHECK_REQUIRED.txt','CC0-1.0.txt'};
-targets = {'README.md','CITATION.cff','RIGHTS_AUTHORITY_CHECK_REQUIRED.txt','LICENSE'};
+names = {'README.md','CITATION.cff','CC-BY-4.0.txt'};
+targets = {'README.md','CITATION.cff','LICENSE'};
 for i = 1:numel(names), copyfile(fullfile(inputRoot, 'dataset_assets', names{i}), fullfile(partialRoot, targets{i})); end
 mkdir(fullfile(partialRoot, 'provenance'));
 names = {'generator_settings.json','realised_parameters.csv','seed_manifest.csv','ground_truth_manifest.csv', ...

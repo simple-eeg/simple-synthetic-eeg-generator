@@ -87,13 +87,13 @@ class FrozenContractTests(unittest.TestCase):
             hashlib.sha256((ROOT / "LICENSE").read_bytes()).hexdigest(),
             "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
         )
-        self.assertEqual((ROOT / "dataset_assets/CC0-1.0.txt").stat().st_size, 7048)
+        self.assertEqual((ROOT / "dataset_assets/CC-BY-4.0.txt").stat().st_size, 18656)
         self.assertEqual(
-            hashlib.sha256((ROOT / "dataset_assets/CC0-1.0.txt").read_bytes()).hexdigest(),
-            "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499",
+            hashlib.sha256((ROOT / "dataset_assets/CC-BY-4.0.txt").read_bytes()).hexdigest(),
+            "9e5f1b3c610b9c2da5c313bf81d577a7d1acec686bdb0384edefa6df0f90cd94",
         )
-        rights = (ROOT / "dataset_assets/RIGHTS_AUTHORITY_CHECK_REQUIRED.txt").read_text(encoding="utf-8")
-        self.assertIn("PUBLIC RELEASE IS NOT AUTHORISED", rights)
+        citation = (ROOT / "dataset_assets/CITATION.cff").read_text(encoding="utf-8")
+        self.assertIn("license: CC-BY-4.0", citation)
 
     def test_settings_are_complete_canonical_freeze(self) -> None:
         settings = load_settings(SETTINGS)

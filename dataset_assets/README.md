@@ -1,7 +1,7 @@
 # SIMPLE synthetic EEG demonstration dataset
 
 This document describes the dataset created by the
-[SIMPLE synthetic EEG generator](../README.md). The signals are wholly
+[SIMPLE synthetic EEG generator](https://github.com/simple-eeg/simple-synthetic-eeg-generator). The signals are wholly
 synthetic: no recording, metadata, identifier, fitted parameter, or other
 information comes from a real person. They are not biologically realistic
 EEG, a pain model, a clinical tool, or evidence validating a neurodynamic
@@ -24,22 +24,22 @@ removed before the output folder is completed.
 
 The generated folder contains only `dataset_list.csv` and `raw/`; the licence
 and citation records in this directory remain with the generator source.
-Follow the [copying instructions](../README.md#copy-the-data-into-simple) to
+Follow the [copying instructions](https://github.com/simple-eeg/simple-synthetic-eeg-generator#copy-the-data-into-simple) to
 place the data in `simple`. Keep the generated folder as the source copy:
 `simple` progressively updates its copy of `data_lists/dataset_list.csv` and
 creates derived files.
 
-## Citation requested
+## Licence and attribution
 
-CC0 does not legally require attribution, but scholarly citation is strongly
-requested. Please cite the eventual SIMPLE methods paper, archived dataset
-version/DOI, and generator software commit recorded in the dataset metadata.
-Hosting, DOI, and publication timing remain unset for this candidate dataset.
+The synthetic dataset and this dataset documentation are licensed under
+[Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
+You may use, modify, and share them, including commercially. Credit the SIMPLE
+project contributors, link to the dataset and licence, and indicate any changes.
+The [dataset citation metadata](CITATION.cff) identifies the dataset; a
+ready-made copy is available in
+[simple-data](https://github.com/simple-eeg/simple-data/tree/main/synthetic-eeg).
 
-## Licence and release status
-
-The intended dataset dedication is CC0 1.0 Universal. Public application of
-CC0 and release remain conditional on a separate
-[rights-authority check](RIGHTS_AUTHORITY_CHECK_REQUIRED.txt). This candidate
-must not be published merely because the CC0 text is present in this
-repository.
+For research use, please also cite the SIMPLE methods paper when available and
+identify the generator version or commit recorded in the dataset metadata.
+The generator software remains licensed under
+[Apache 2.0](https://github.com/simple-eeg/simple-synthetic-eeg-generator/blob/main/LICENSE).

@@ -34,8 +34,7 @@ ARRAY_NAME = "sub-{subject}_ses-01_run-01_eeg.f32le"
 ASSET_NAMES = (
     "README.md",
     "CITATION.cff",
-    "RIGHTS_AUTHORITY_CHECK_REQUIRED.txt",
-    "CC0-1.0.txt",
+    "CC-BY-4.0.txt",
 )
 DATASET_LIST_FIELDS = ["subjectID", "sessionID", "runID", "path_raw", "EEGfile_raw"]
 FORBIDDEN_SUFFIXES = {".set", ".fdt", ".mat", ".log", ".diary"}

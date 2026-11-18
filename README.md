@@ -240,8 +240,10 @@ testing and auditing; they are not the normal user interface.
 
 ## Licensing and release
 
-Generator code is Apache-2.0. The generated dataset is selected for CC0-1.0
-with a scholarly citation request, but public release requires the separate
-rights-authority check. See the [dataset records](dataset_assets/README.md)
-and [software citation metadata](CITATION.cff). Hosting, DOI, archive URL, and
-publication timing remain unset.
+The generator software is licensed under [Apache 2.0](LICENSE). The generated
+synthetic dataset and its accompanying dataset documentation are licensed under
+[CC BY 4.0](dataset_assets/CC-BY-4.0.txt), which allows reuse with attribution.
+See the [dataset guide](dataset_assets/README.md#licence-and-attribution) for
+crediting the data and the [software citation metadata](CITATION.cff) for
+crediting the generator. A ready-made copy is shared in
+[simple-data](https://github.com/simple-eeg/simple-data/tree/main/synthetic-eeg).

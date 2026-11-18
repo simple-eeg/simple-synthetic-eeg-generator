@@ -1,7 +1,8 @@
 cff-version: 1.2.0
-message: "Please cite the SIMPLE methods paper, dataset release, and generator software release."
+message: "Credit the SIMPLE project contributors, link to the dataset and CC BY 4.0 licence, and indicate any changes. For research use, please also cite the SIMPLE methods paper when available."
 title: "SIMPLE synthetic EEG demonstration dataset"
 type: dataset
 authors:
   - name: "SIMPLE project contributors"
-license: CC0-1.0
+license: CC-BY-4.0
+url: "https://github.com/simple-eeg/simple-data/tree/main/synthetic-eeg"

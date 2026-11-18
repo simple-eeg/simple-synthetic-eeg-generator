@@ -5,7 +5,7 @@ the [SIMPLE tutorial](https://github.com/simple-eeg/simple#synthetic-tutorial).
 It contains the generator code, not generated EEG data. Every identifier and
 sample is synthetic and corresponds to no real person.
 
-**Software credits:** [Marianne van der Vaart](https://github.com/mvandervaart), [Simon Marchant](https://github.com/simonmarchant), and [Luke Baxter](https://github.com/lukebax) contributed equally to the development of this software.
+**Software credits:** [Luke Baxter](https://github.com/lukebax), [Marianne van der Vaart](https://github.com/mvandervaart), and [Simon Marchant](https://github.com/simonmarchant) contributed equally to the development of this software.
 
 To create the tutorial data, follow the setup, generation, and copying steps
 below. The [dataset design](#dataset-design) describes the signals; the

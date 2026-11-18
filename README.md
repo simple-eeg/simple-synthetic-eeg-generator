@@ -238,6 +238,13 @@ structural checks and native save/reload verification of every dataset pass.
 Low-level Python and MATLAB entry points remain available to maintainers for
 testing and auditing; they are not the normal user interface.
 
+Maintainers can run the **MATLAB and EEGLAB validation** workflow from this
+repository's GitHub **Actions** tab. It runs the MATLAB tests and generates a
+temporary example on macOS, Windows, and Linux, including native save/reload
+verification of all 31 recordings. It uses MATLAB R2026a Update 4 and EEGLAB
+2026.0.0, and does not change the shared dataset. The Windows run reports the
+Unix file-permission test as skipped.
+
 ## Licensing and release
 
 The generator software is licensed under [Apache 2.0](LICENSE). The generated

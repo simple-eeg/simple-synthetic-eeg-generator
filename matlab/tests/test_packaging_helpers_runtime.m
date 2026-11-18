@@ -38,8 +38,13 @@ mkdir(fullfile(root, 'visible')); write_bytes(fullfile(root, 'visible', 'a.bin')
 write_bytes(fullfile(root, '.hidden'), uint8(2));
 actual = recursive_files(root, root);
 verifyEqual(testCase, sort(actual), sort([".hidden";"visible/a.bin"]));
-symlink = fullfile(root, 'link'); [status,~] = system(sprintf('ln -s %s %s', quote(fullfile(root, '.hidden')), quote(symlink)));
-assumeEqual(testCase, status, 0); verifyError(testCase, @() recursive_files(root, root), 'SIMPLE:Symlink');
+symlink = fullfile(root, 'link');
+emptyParts = javaArray('java.lang.String', 0);
+linkPath = java.nio.file.Paths.get(symlink, emptyParts);
+targetPath = java.nio.file.Paths.get(fullfile(root, '.hidden'), emptyParts);
+java.nio.file.Files.createSymbolicLink(linkPath, targetPath, ...
+    javaArray('java.nio.file.attribute.FileAttribute', 0));
+verifyError(testCase, @() recursive_files(root, root), 'SIMPLE:Symlink');
 end
 
 function testUnsafeManifestPathsAreRejected(testCase)
@@ -135,10 +140,6 @@ function tf = safe_relative(value)
 parts = split(value,'/');
 tf = strlength(value)>0 && ~startsWith(value,'/') && ~contains(value,'\\') && ...
     ~contains(value,'//') && all(parts~=".") && all(parts~="..") && all(strlength(parts)>0);
-end
-
-function output = quote(value)
-output = ['''' strrep(char(value), '''', '''"''"''') ''''];
 end
 
 function safe_remove(root)

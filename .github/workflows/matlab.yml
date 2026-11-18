@@ -1,0 +1,96 @@
+name: MATLAB and EEGLAB validation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  matlab:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - name: Check out the generator
+        uses: actions/checkout@v7
+        with:
+          path: project
+      - name: Check out EEGLAB 2026.0.0
+        uses: actions/checkout@v7
+        with:
+          repository: sccn/eeglab
+          ref: bcc710a8edd712738e48879b6846958a2be7be1d
+          path: eeglab
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Set up the generator environment
+        working-directory: project
+        shell: python
+        run: |
+          import os
+          import subprocess
+          import sys
+          from pathlib import Path
+          root = Path.cwd().resolve()
+          subprocess.run([sys.executable, "setup_environment"], check=True)
+          python = root / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+          subprocess.run([str(python), "-m", "pip", "install", "--require-hashes", "-r", "requirements/ci.lock"], check=True)
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as stream:
+              stream.write("SIMPLE_SYNTH_PYTHON=" + str(python) + "\n")
+      - name: Set up MATLAB R2026a Update 4
+        uses: matlab-actions/setup-matlab@v3
+        with:
+          release: R2026aU4
+      - name: Select the MATLAB and EEGLAB installations
+        shell: python
+        run: |
+          import os
+          import shutil
+          from pathlib import Path
+          executable = shutil.which("matlab.exe" if os.name == "nt" else "matlab")
+          if executable is None:
+              raise RuntimeError("Setup MATLAB did not provide a MATLAB executable on PATH")
+          matlab = Path(executable).resolve(strict=True)
+          eeglab = (Path(os.environ["GITHUB_WORKSPACE"]) / "eeglab").resolve(strict=True)
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as stream:
+              stream.write("SIMPLE_SYNTH_MATLAB_EXECUTABLE=" + str(matlab) + "\n")
+              stream.write("SIMPLE_SYNTH_EEGLAB_ROOT=" + str(eeglab) + "\n")
+      - name: Run MATLAB and native EEGLAB tests
+        uses: matlab-actions/run-command@v3
+        with:
+          command: >-
+            root = fullfile(getenv('GITHUB_WORKSPACE'), 'project');
+            cd(root);
+            addpath(fullfile(root, 'matlab'));
+            results = runtests(fullfile(root, 'matlab', 'tests'));
+            disp(table(results));
+            assert(~isempty(results) && ~any([results.Failed]), 'MATLAB tests failed.');
+            skipped = string({results([results.Incomplete]).Name});
+            if ispc, assert(all(endsWith(skipped, '/testReadOnlyInputTreeRemainsConsumable')), 'Unexpected skipped MATLAB tests.');
+            else, assert(isempty(skipped), 'MATLAB tests were skipped.'); end;
+            fprintf('MATLAB tests: %d passed, %d skipped.\n', nnz([results.Passed]), nnz([results.Incomplete]));
+      - name: Generate and verify the complete synthetic example
+        if: ${{ !cancelled() }}
+        uses: matlab-actions/run-command@v3
+        with:
+          command: >-
+            root = fullfile(getenv('GITHUB_WORKSPACE'), 'project');
+            cd(root);
+            addpath(fullfile(root, 'matlab'));
+            parent = char(java.io.File(fullfile(getenv('RUNNER_TEMP'), 'simple-generator-validation')).getCanonicalPath());
+            assert(~isfolder(parent), 'Synthetic validation folder already exists.');
+            mkdir(parent);
+            [status, output] = run_command(getenv('SIMPLE_SYNTH_PYTHON'), [string(fullfile(root, 'generate_dataset')), string(parent)]);
+            fprintf('%s', output);
+            assert(status == 0, 'End-to-end generation or native verification failed.');
+            generated = fullfile(parent, 'simple-synthetic-eeg-demo');
+            recordings = dir(fullfile(generated, 'raw', '**', '*.set'));
+            assert(numel(recordings) == 31 && isfile(fullfile(generated, 'dataset_list.csv')), 'Generated dataset inventory differs.');
+            assert(isempty(dir(fullfile(generated, '**', '*.fdt'))), 'Unexpected separate EEG data files.');
+            fprintf('End-to-end generation passed: 31 native recordings saved, reloaded, and verified by the generator.\n');

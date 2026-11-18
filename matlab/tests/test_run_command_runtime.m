@@ -21,22 +21,11 @@ python = string(getenv('SIMPLE_SYNTH_PYTHON'));
 assert(strlength(python) > 0, 'Set SIMPLE_SYNTH_PYTHON to the checkout-local interpreter.');
 code = 'import json,sys;print(json.dumps(sys.argv[1:],separators=(chr(44),chr(58))))';
 expected = ["ordinary", "two words", "O'Brien", "", "$HOME", "%PATH%", "x&y", "x|y", ...
-    string('embedded"quote'), string('C:\two words\'), string('slash\"quote')];
-property = 'jdk.lang.Process.allowAmbiguousCommands';
-original = java.lang.System.getProperty(property);
-if java.lang.System.getProperties().containsKey(property)
-    testCase.addTeardown(@() java.lang.System.setProperty(property, original));
-else
-    testCase.addTeardown(@() java.lang.System.clearProperty(property));
-end
-java.lang.System.setProperty(property, '');
-previous = java.lang.System.getProperty(property);
-previousPresent = java.lang.System.getProperties().containsKey(property);
+    string('embedded"quote'), string('C:\two words\'), string('slash\"quote'), ...
+    string('"wholly quoted"'), string('"'), string('""'), string('C:\two words\\')];
 [status, output] = run_command(python, ["-I", "-c", string(code), expected]);
 verifyEqual(testCase, status, 0);
 verifyEqual(testCase, string(jsondecode(strtrim(output))), expected.');
-verifyEqual(testCase, java.lang.System.getProperties().containsKey(property), previousPresent);
-verifyEqual(testCase, char(java.lang.System.getProperty(property)), char(previous));
 end
 
 function testGitExecution(testCase)
@@ -50,16 +39,12 @@ python = string(getenv('SIMPLE_SYNTH_PYTHON'));
 [status, output] = run_command(python, ["-I", "-c", "import sys;print('failure',file=sys.stderr);sys.exit(7)"]);
 verifyEqual(testCase, status, 7);
 verifyEqual(testCase, strtrim(output), 'failure');
-property = 'jdk.lang.Process.allowAmbiguousCommands';
-previous = java.lang.System.getProperty(property);
-previousPresent = java.lang.System.getProperties().containsKey(property);
-didThrow = false;
-try
-    run_command(fullfile(tempname, 'absent-executable'), strings(1, 0));
-catch
-    didThrow = true;
+missing = fullfile(tempname, 'absent-executable');
+if ispc
+    [status, output] = run_command(missing, strings(1, 0));
+    verifyNotEqual(testCase, status, 0);
+    verifySubstring(testCase, output, 'FileNotFoundError');
+else
+    verifyError(testCase, @() run_command(missing, strings(1, 0)), 'MATLAB:Java:GenericException');
 end
-verifyTrue(testCase, didThrow, 'Starting an absent executable must fail.');
-verifyEqual(testCase, java.lang.System.getProperties().containsKey(property), previousPresent);
-verifyEqual(testCase, char(java.lang.System.getProperty(property)), char(previous));
 end

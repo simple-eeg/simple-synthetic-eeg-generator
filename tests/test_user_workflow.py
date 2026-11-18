@@ -8,6 +8,7 @@ from unittest import mock
 
 import simple_synthetic_eeg_generator.user_workflow as workflow
 from simple_synthetic_eeg_generator.canonical import build_manifest
+from simple_synthetic_eeg_generator.platform_support import venv_python
 from simple_synthetic_eeg_generator.errors import TransactionError, ValidationError
 from simple_synthetic_eeg_generator.settings import EXPECTED_SUBJECTS, load_settings
 from simple_synthetic_eeg_generator.user_workflow import (
@@ -96,7 +97,7 @@ def make_paths(parent: Path, token: str) -> BuildPaths:
 def make_runtime() -> RuntimePaths:
     return RuntimePaths(
         source_root=ROOT,
-        python=ROOT / ".venv/bin/python",
+        python=venv_python(ROOT),
         matlab=Path("/Applications/MATLAB_R2026a.app/bin/matlab"),
         eeglab_root=Path.home() / "Documents/MATLAB/eeglab2026.0.0",
         settings=ROOT / "config/generator_settings.json",
@@ -114,9 +115,9 @@ class UserWorkflowTests(unittest.TestCase):
         actions = [action for action in parser()._actions if action.dest != "help"]
         self.assertEqual([action.dest for action in actions], ["parent_directory"])
         launcher_text = launcher.read_text(encoding="utf-8")
-        self.assertIn("./generate_dataset", launcher_text)
-        self.assertIn("[ ! -x", launcher_text)
-        self.assertIn("-u -I", launcher_text)
+        self.assertIn("python generate_dataset", launcher_text)
+        self.assertIn("python.is_file()", launcher_text)
+        self.assertIn('"-u", "-I"', launcher_text)
 
     def test_runtime_discovery_selects_newest_installed_matlab_and_eeglab(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -124,14 +125,14 @@ class UserWorkflowTests(unittest.TestCase):
             applications = root / "Applications"
             applications.mkdir()
             for release in ("2026a", "2027b"):
-                executable = applications / f"MATLAB_R{release}.app" / "bin" / "matlab"
+                executable = applications / f"MATLAB_R{release}.app" / "bin" / workflow.MATLAB_FILENAME
                 executable.parent.mkdir(parents=True)
                 executable.write_bytes(b"matlab")
                 executable.chmod(0o755)
             selected_matlab = _select_matlab(applications_root=applications, environment={})
             self.assertEqual(
                 selected_matlab,
-                applications / "MATLAB_R2027b.app" / "bin" / "matlab",
+                applications / "MATLAB_R2027b.app" / "bin" / workflow.MATLAB_FILENAME,
             )
 
             home = root / "home"
@@ -142,6 +143,20 @@ class UserWorkflowTests(unittest.TestCase):
                 (eeglab / "eeglab.m").write_text("% fixture\n", encoding="utf-8")
             selected_eeglab = _select_eeglab(home=home, environment={})
             self.assertEqual(selected_eeglab, matlab_home / "eeglab2027.1")
+
+    def test_matlab_discovery_supports_release_folders_and_path_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            standard = root / "MATLAB"
+            executable = standard / "R2026a" / "bin" / workflow.MATLAB_FILENAME
+            executable.parent.mkdir(parents=True)
+            executable.write_bytes(b"matlab")
+            executable.chmod(0o755)
+            self.assertEqual(_select_matlab(applications_root=standard, environment={}), executable)
+            self.assertEqual(
+                _select_matlab(applications_root=root / "absent", environment={"PATH": str(executable.parent)}),
+                executable,
+            )
 
     def test_runtime_discovery_honours_canonical_optional_overrides(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -312,13 +327,13 @@ class UserWorkflowTests(unittest.TestCase):
             self.assertEqual(result, paths.final)
             validate_transfer_bundle(result)
             self.assertEqual({entry.name for entry in result.iterdir()}, {"dataset_list.csv", "raw"})
-            self.assertEqual(result.stat().st_mode & 0o777, 0o755)
-            self.assertTrue(
-                all(
-                    path.stat().st_mode & 0o777 == (0o755 if path.is_dir() else 0o644)
-                    for path in result.rglob("*")
-                )
-            )
+            if os.name == "nt":
+                self.assertTrue(all(os.access(path, os.W_OK) for path in result.rglob("*")))
+            else:
+                self.assertEqual(result.stat().st_mode & 0o777, 0o755)
+                self.assertTrue(all(path.stat().st_mode & 0o777 ==
+                                    (0o755 if path.is_dir() else 0o644)
+                                    for path in result.rglob("*")))
             self.assertFalse(paths.array_workspace.exists())
             self.assertFalse(paths.packaging_workspace.exists())
             self.assertFalse(paths.transfer_partial.exists())
@@ -446,8 +461,8 @@ class UserWorkflowTests(unittest.TestCase):
             clear=True,
         ):
             environment = _matlab_environment(runtime, Path("/input"), Path("/output"))
-        self.assertEqual(environment["SIMPLE_SYNTH_INPUT_ROOT"], "/input")
-        self.assertEqual(environment["SIMPLE_SYNTH_OUTPUT_ROOT"], "/output")
+        self.assertEqual(environment["SIMPLE_SYNTH_INPUT_ROOT"], str(Path("/input")))
+        self.assertEqual(environment["SIMPLE_SYNTH_OUTPUT_ROOT"], str(Path("/output")))
         self.assertEqual(environment["KEEP_ME"], "yes")
         self.assertNotIn("MATLABPATH", environment)
         self.assertNotIn("PYTHONPATH", environment)
@@ -516,6 +531,14 @@ class UserWorkflowTests(unittest.TestCase):
         ), self.assertRaises(TransactionError):
             _default_reauditor(runtime)
 
+    def test_native_preflight_waits_for_matlab_and_propagates_failure(self) -> None:
+        with mock.patch.object(workflow, "_run_child", return_value=7) as child:
+            with self.assertRaises(ValidationError):
+                workflow._default_native_preflight(make_runtime())
+        command = child.call_args.args[0]
+        self.assertEqual(command[-2:], ["-batch", "run('preflight_environment.m');"])
+        self.assertEqual("-wait" in command, os.name == "nt")
+
     def test_interruption_terminates_and_waits_for_matlab_process_group(self) -> None:
         process = mock.Mock()
         process.pid = 424242
@@ -525,10 +548,16 @@ class UserWorkflowTests(unittest.TestCase):
             "simple_synthetic_eeg_generator.user_workflow.subprocess.Popen",
             return_value=process,
         ), mock.patch(
-            "simple_synthetic_eeg_generator.user_workflow.os.killpg"
-        ) as kill_group, self.assertRaises(KeyboardInterrupt):
+            "simple_synthetic_eeg_generator.user_workflow.os.killpg", create=True
+        ) as kill_group, mock.patch(
+            "simple_synthetic_eeg_generator.user_workflow.subprocess.run"
+        ) as taskkill, self.assertRaises(KeyboardInterrupt):
             _run_child(["matlab"], cwd=ROOT, environment={})
-        kill_group.assert_called_once_with(process.pid, __import__("signal").SIGTERM)
+        if os.name == "nt":
+            self.assertEqual(taskkill.call_args.args[0], ["taskkill", "/PID", str(process.pid), "/T", "/F"])
+            process.kill.assert_called_once()
+        else:
+            kill_group.assert_called_once_with(process.pid, __import__("signal").SIGTERM)
         self.assertEqual(process.wait.call_count, 2)
 
 

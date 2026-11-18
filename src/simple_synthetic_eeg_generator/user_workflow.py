@@ -22,15 +22,20 @@ from .canonical import (
     write_new_bytes,
 )
 from .environment import runtime_environment_receipt
+from .platform_support import sync_directory, venv_python
 from .errors import GeneratorError, TransactionError, ValidationError
 from .settings import EXPECTED_SUBJECTS, FrozenSettings, load_settings
 from .transaction import build_array_stage, exclusive_atomic_rename
 
 FINAL_NAME = "simple-synthetic-eeg-demo"
-DEFAULT_APPLICATIONS_ROOT = Path("/Applications")
+DEFAULT_APPLICATIONS_ROOT = (
+    Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "MATLAB"
+    if os.name == "nt" else Path("/usr/local/MATLAB" if sys.platform.startswith("linux") else "/Applications")
+)
+MATLAB_FILENAME = "matlab.exe" if os.name == "nt" else "matlab"
 MATLAB_OVERRIDE_VARIABLE = "SIMPLE_SYNTH_MATLAB_EXECUTABLE"
 EEGLAB_OVERRIDE_VARIABLE = "SIMPLE_SYNTH_EEGLAB_ROOT"
-MATLAB_APPLICATION_PATTERN = re.compile(r"MATLAB_R([0-9]{4})([ab])\.app\Z")
+MATLAB_APPLICATION_PATTERN = re.compile(r"(?:MATLAB_)?R([0-9]{4})([ab])(?:\.app)?\Z")
 EEGLAB_DIRECTORY_PATTERN = re.compile(r"eeglab([0-9]+(?:\.[0-9]+)*)\Z")
 DATASET_LIST_HEADER = ("subjectID", "sessionID", "runID", "path_raw", "EEGfile_raw")
 
@@ -66,7 +71,7 @@ NativePreflight = Callable[[RuntimePaths], None]
 
 def parser() -> argparse.ArgumentParser:
     command = argparse.ArgumentParser(
-        prog="./generate_dataset",
+        prog="python generate_dataset",
         description=(
             "Create the fixed SIMPLE synthetic dataset in "
             "<existing-parent-directory>/simple-synthetic-eeg-demo"
@@ -117,25 +122,27 @@ def _select_matlab(
     if override:
         return _require_canonical_executable(Path(override), "Selected MATLAB executable")
 
-    applications_root = _require_canonical_directory(applications_root, "Applications directory")
     candidates: list[tuple[tuple[int, int], Path]] = []
-    for application in applications_root.glob("MATLAB_R*.app"):
+    for application in applications_root.glob("*"):
         match = MATLAB_APPLICATION_PATTERN.fullmatch(application.name)
         if match is None:
             continue
         try:
             _require_canonical_directory(application, "MATLAB application")
             executable = _require_canonical_executable(
-                application / "bin" / "matlab", "MATLAB executable"
+                application / "bin" / MATLAB_FILENAME, "MATLAB executable"
             )
         except TransactionError:
             continue
         half = 0 if match.group(2) == "a" else 1
         candidates.append(((int(match.group(1)), half), executable))
     if not candidates:
+        on_path = shutil.which(MATLAB_FILENAME, path=environment.get("PATH"))
+        if on_path:
+            return _require_canonical_executable(Path(on_path).resolve(strict=True), "MATLAB executable")
         raise TransactionError(
-            "No usable MATLAB_R*.app installation was found in /Applications; "
-            f"set {MATLAB_OVERRIDE_VARIABLE} to a canonical MATLAB executable if installed elsewhere"
+            "No usable MATLAB installation was found in its standard location or PATH; "
+            f"set {MATLAB_OVERRIDE_VARIABLE} to its executable"
         )
     candidates.sort(key=lambda item: (item[0], item[1].as_posix()), reverse=True)
     highest = candidates[0][0]
@@ -189,7 +196,7 @@ def _has_git_boundary(path: Path) -> bool:
     try:
         completed = subprocess.run(
             [
-                "/usr/bin/git",
+                "git",
                 "-C",
                 str(path),
                 "rev-parse",
@@ -237,7 +244,7 @@ def discover_runtime(
     """Select installed runtimes by location; native capabilities are tested separately."""
 
     source_root = _require_canonical_directory(source_root, "Generator checkout")
-    python = source_root / ".venv" / "bin" / "python"
+    python = venv_python(source_root)
     selected_environment = os.environ if environment is None else environment
     matlab = _select_matlab(
         applications_root=applications_root, environment=selected_environment
@@ -318,6 +325,17 @@ def _stop_child(process: subprocess.Popen[bytes]) -> None:
 
     if process.poll() is not None:
         return
+    if os.name == "nt":
+        # taskkill terminates MATLAB and any descendants, not just its launcher.
+        subprocess.run(
+            ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, check=False,
+        )
+        if process.poll() is None:
+            process.kill()
+        process.wait(timeout=10)
+        return
     try:
         os.killpg(process.pid, signal.SIGTERM)
     except (ProcessLookupError, PermissionError):
@@ -349,7 +367,8 @@ def _run_child(command: list[str], *, cwd: Path, environment: dict[str, str]) ->
             cwd=cwd,
             env=environment,
             stdin=subprocess.DEVNULL,
-            start_new_session=True,
+            start_new_session=os.name != "nt",
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0,
         )
     except OSError as exc:
         raise ValidationError("The selected MATLAB executable could not be started") from exc
@@ -358,6 +377,12 @@ def _run_child(command: list[str], *, cwd: Path, environment: dict[str, str]) ->
     except BaseException:
         _stop_child(process)
         raise
+
+
+def _matlab_batch_command(runtime: RuntimePaths, statement: str) -> list[str]:
+    # The Windows launcher needs -wait to return MATLAB's exit status.
+    wait = ["-wait"] if os.name == "nt" else []
+    return [str(runtime.matlab), *wait, "-batch", statement]
 
 
 def _default_native_preflight(runtime: RuntimePaths) -> None:
@@ -372,7 +397,7 @@ def _default_native_preflight(runtime: RuntimePaths) -> None:
     )
     command = "run('preflight_environment.m');"
     status = _run_child(
-        [str(runtime.matlab), "-batch", command],
+        _matlab_batch_command(runtime, command),
         cwd=runtime.source_root / "matlab",
         environment=environment,
     )
@@ -390,7 +415,7 @@ def _default_packager(input_root: Path, output_root: Path, runtime: RuntimePaths
         "run('package_and_verify_eeglab.m');"
     )
     status = _run_child(
-        [str(runtime.matlab), "-batch", matlab_command],
+        _matlab_batch_command(runtime, matlab_command),
         cwd=runtime.source_root / "matlab",
         environment=_matlab_environment(runtime, input_root, output_root),
     )
@@ -504,9 +529,13 @@ def validate_transfer_bundle(root: Path) -> None:
         raise ValidationError("Final dataset contains a forbidden .fdt sidecar")
     all_paths = [root, *root.rglob("*")]
     for path in all_paths:
-        expected_mode = 0o755 if path.is_dir() else 0o644
-        if path.stat(follow_symlinks=False).st_mode & 0o777 != expected_mode:
-            raise ValidationError("Final dataset modes must be owner-writable 0755/0644")
+        if os.name == "nt":
+            if not os.access(path, os.W_OK):
+                raise ValidationError("Final dataset must be writable")
+        else:
+            expected_mode = 0o755 if path.is_dir() else 0o644
+            if path.stat(follow_symlinks=False).st_mode & 0o777 != expected_mode:
+                raise ValidationError("Final dataset modes must be owner-writable 0755/0644")
 
 
 def _copy_transfer(packaged: Path, transfer: Path) -> None:
@@ -533,19 +562,11 @@ def _copy_transfer(packaged: Path, transfer: Path) -> None:
         os.chmod(directory_path, 0o755)
     validate_transfer_bundle(transfer)
     for directory, _, _ in os.walk(transfer, topdown=False):
-        descriptor = os.open(directory, os.O_RDONLY)
-        try:
-            os.fsync(descriptor)
-        finally:
-            os.close(descriptor)
+        sync_directory(Path(directory))
 
 
 def _fsync_directory(path: Path) -> None:
-    descriptor = os.open(path, os.O_RDONLY)
-    try:
-        os.fsync(descriptor)
-    finally:
-        os.close(descriptor)
+    sync_directory(path)
 
 
 def _remove_path(path: Path) -> None:
@@ -657,7 +678,7 @@ def build_dataset(
 
 def run(arguments: Sequence[str] | None, *, source_root: Path) -> int:
     args = parser().parse_args(arguments)
-    build_dataset(args.parent_directory, source_root)
+    build_dataset(Path(os.path.abspath(args.parent_directory)), source_root)
     return 0
 
 

@@ -8,7 +8,7 @@
 %   SIMPLE_SYNTH_OUTPUT_ROOT    absent final bundle destination
 %   SIMPLE_SYNTH_EEGLAB_ROOT    selected canonical EEGLAB root
 %   SIMPLE_SYNTH_GENERATOR_ROOT exact clean generator checkout
-%   SIMPLE_SYNTH_PYTHON         selected <generator>/.venv/bin/python entry
+%   SIMPLE_SYNTH_PYTHON         selected checkout-local Python interpreter
 %
 % The current MATLAB folder must be this tracked matlab/ directory. EEGLAB
 % must already be initialised from the selected root. No workflow script runs.
@@ -31,7 +31,7 @@ generatorRoot = require_canonical_root('SIMPLE_SYNTH_GENERATOR_ROOT', true);
 assert(strcmp(scriptDir, fullfile(generatorRoot, 'matlab')), ...
     'Script must be the tracked file beneath the exact generator root.');
 assert(strcmp(pwd, scriptDir), 'Run unchanged with MATLAB current folder = tracked matlab/.');
-assert_unique_function_binding('shell_command', fullfile(scriptDir, 'shell_command.m'));
+assert_unique_function_binding('run_command', fullfile(scriptDir, 'run_command.m'));
 assert_unique_function_binding('contains_ascii_case_insensitive_bytes', ...
     fullfile(scriptDir, 'contains_ascii_case_insensitive_bytes.m'));
 assert_unique_function_binding('find_stale_partial_siblings', ...
@@ -43,15 +43,16 @@ generatorHead = verify_clean_generator_checkout(generatorRoot);
 eeglabRoot = require_canonical_root('SIMPLE_SYNTH_EEGLAB_ROOT', true);
 runtimeIdentity = validate_runtime_capabilities(eeglabRoot, false);
 pythonPath = require_python_entry(generatorRoot);
-helperPath = fullfile(generatorRoot, 'tools', 'exclusive_rename_macos.py');
+helperPath = fullfile(generatorRoot, 'tools', 'exclusive_rename.py');
 assert(isfile(helperPath) && ~path_is_symlink(helperPath), 'Tracked exclusive-rename helper is absent or a symlink.');
 helperSha256 = sha256_file(helperPath);
 require_tracked_clean_paths(generatorRoot, ...
-    ["matlab/package_and_verify_eeglab.m"; "matlab/shell_command.m"; ...
+    ["matlab/package_and_verify_eeglab.m"; "matlab/run_command.m"; ...
      "matlab/contains_ascii_case_insensitive_bytes.m"; ...
      "matlab/find_stale_partial_siblings.m"; ...
      "matlab/validate_runtime_capabilities.m"; ...
-     "tools/exclusive_rename_macos.py"; ...
+     "tools/exclusive_rename.py"; ...
+     "src/simple_synthetic_eeg_generator/platform_support.py"; ...
      "config/generator_settings.json"]);
 
 inputRoot = require_canonical_root('SIMPLE_SYNTH_INPUT_ROOT', true);
@@ -171,7 +172,7 @@ fprintf('Packaged and round-trip verified 31 one-file EEGLAB datasets; zero .fdt
 
 function pathValue = require_canonical_root(variableName, mustExist)
 pathValue = string(getenv(variableName));
-assert(strlength(pathValue) > 0 && startsWith(pathValue, filesep), '%s must be an absolute POSIX path.', variableName);
+assert(strlength(pathValue) > 0 && is_absolute_path(pathValue), '%s must be an absolute path.', variableName);
 assert(is_lexically_canonical(pathValue), '%s must be lexically canonical.', variableName);
 if mustExist, assert(isfolder(pathValue), '%s must be an existing directory.', variableName); end
 assert_no_symlink_components(pathValue, true);
@@ -180,7 +181,7 @@ end
 
 function destination = require_absent_canonical_destination(variableName)
 destination = string(getenv(variableName));
-assert(strlength(destination) > 0 && startsWith(destination, filesep), '%s must be absolute.', variableName);
+assert(strlength(destination) > 0 && is_absolute_path(destination), '%s must be absolute.', variableName);
 assert(is_lexically_canonical(destination), '%s must be lexically canonical.', variableName);
 assert(~path_exists_including_symlink(destination), '%s must be absent including symlinks.', variableName);
 parent = string(fileparts(destination));
@@ -188,11 +189,14 @@ assert(isfolder(parent) && strcmp(canonical_existing_path(parent), parent), 'Des
 assert_no_symlink_components(parent, true);
 end
 
+function tf = is_absolute_path(pathValue)
+jpath = java.nio.file.Paths.get(char(pathValue), javaArray('java.lang.String', 0));
+tf = jpath.isAbsolute();
+end
+
 function tf = is_lexically_canonical(pathValue)
-text = char(pathValue);
-tf = startsWith(text, '/') && ~contains(text, '//') && ...
-    isempty(regexp(text, '(^|/)\.\.?(/|$)', 'once')) && ...
-    (strcmp(text, '/') || ~endsWith(text, '/'));
+jpath = java.nio.file.Paths.get(char(pathValue), javaArray('java.lang.String', 0));
+tf = jpath.isAbsolute() && strcmp(char(jpath.normalize().toString()), char(pathValue));
 end
 
 function canonical = canonical_existing_path(pathValue)
@@ -201,13 +205,12 @@ canonical = string(char(java.nio.file.Paths.get(char(pathValue), ...
 end
 
 function assert_no_symlink_components(pathValue, includeLeaf)
-parts = split(extractAfter(string(pathValue), 1), filesep);
-current = string(filesep);
-limit = numel(parts) - (~includeLeaf);
-for i = 1:limit
-    if strlength(parts(i)) == 0, continue; end
-    current = fullfile(current, parts(i));
-    assert(~path_is_symlink(current), 'Path contains a forbidden symlink component: %s', current);
+current = java.nio.file.Paths.get(char(pathValue), javaArray('java.lang.String', 0));
+if ~includeLeaf, current = current.getParent(); end
+while ~isempty(current)
+    assert(~java.nio.file.Files.isSymbolicLink(current), ...
+        'Path contains a forbidden symlink component: %s', char(current.toString()));
+    current = current.getParent();
 end
 end
 
@@ -247,29 +250,33 @@ assert(isempty(candidateNames), 'A stale sibling packaging partial exists; inspe
 end
 
 function head = verify_clean_generator_checkout(root)
-[status, top] = system(shell_command('/usr/bin/git', ["-C",root,"rev-parse","--show-toplevel"]));
-assert(status == 0 && strcmp(strtrim(top), root), 'Generator root is not its exact Git top level.');
-[status, head] = system(shell_command('/usr/bin/git', ["-C",root,"rev-parse","HEAD"]));
+[status, top] = run_command('git', ["-C",root,"rev-parse","--show-toplevel"]);
+assert(status == 0 && strcmp(canonical_existing_path(strtrim(top)), root), 'Generator root is not its exact Git top level.');
+[status, head] = run_command('git', ["-C",root,"rev-parse","HEAD"]);
 head = string(strtrim(head));
 assert(status == 0 && ~isempty(regexp(head, '^[0-9a-f]{40}$', 'once')), 'Generator HEAD is not one exact commit.');
-[status, dirty] = system(shell_command('/usr/bin/git', ["-C",root,"status","--porcelain=v1","--untracked-files=all"]));
+[status, dirty] = run_command('git', ["-C",root,"status","--porcelain=v1","--untracked-files=all"]);
 assert(status == 0 && isempty(strtrim(dirty)), 'Generator checkout must be clean with no unexpected untracked files.');
 end
 
 function require_tracked_clean_paths(root, relativePaths)
 for i = 1:numel(relativePaths)
     relative = relativePaths(i);
-    [status, output] = system(shell_command('/usr/bin/git', ["-C",root,"ls-files","--error-unmatch","--",relative]));
+    [status, output] = run_command('git', ["-C",root,"ls-files","--error-unmatch","--",relative]);
     assert(status == 0 && strcmp(strtrim(output), relative), 'Producing source path is not tracked exactly: %s', relative);
-    [status, ~] = system(shell_command('/usr/bin/git', ["-C",root,"diff","--quiet","HEAD","--",relative]));
+    [status, ~] = run_command('git', ["-C",root,"diff","--quiet","HEAD","--",relative]);
     assert(status == 0, 'Producing source path differs from clean HEAD: %s', relative);
 end
 end
 
 function pythonPath = require_python_entry(generatorRoot)
 pythonPath = string(getenv('SIMPLE_SYNTH_PYTHON'));
-expectedPath = fullfile(generatorRoot, '.venv', 'bin', 'python');
-assert(strcmp(pythonPath, expectedPath), 'SIMPLE_SYNTH_PYTHON must be exact <generator>/.venv/bin/python.');
+if ispc
+    expectedPath = fullfile(generatorRoot, '.venv', 'Scripts', 'python.exe');
+else
+    expectedPath = fullfile(generatorRoot, '.venv', 'bin', 'python');
+end
+assert(strcmp(pythonPath, expectedPath), 'SIMPLE_SYNTH_PYTHON must be the checkout-local virtual-environment interpreter.');
 pythonBin = string(fileparts(pythonPath));
 pythonVenv = string(fileparts(pythonBin));
 assert_no_symlink_components(pythonVenv, true);
@@ -282,7 +289,7 @@ end
 
 function exclusive_atomic_move(source, destination, pythonPath, helperPath)
 assert(~path_exists_including_symlink(destination), 'Exclusive destination unexpectedly exists.');
-[status, output] = system(shell_command(pythonPath, ["-I", string(helperPath), string(source), string(destination)]));
+[status, output] = run_command(pythonPath, ["-I", string(helperPath), string(source), string(destination)]);
 assert(status == 0, 'Exclusive atomic promotion failed without overwrite: %s', strtrim(output));
 assert(isfolder(destination) && ~path_exists_including_symlink(source), 'Exclusive atomic promotion did not complete exactly.');
 end
@@ -472,7 +479,8 @@ end
 end
 
 function tf = looks_like_absolute_path(value)
-tf = startsWith(value, '/') || ~isempty(regexp(char(value), '(^|[[:space:]])/[A-Za-z0-9._-]+/', 'once'));
+tf = startsWith(value, '/') || startsWith(value, '\\') || ...
+    ~isempty(regexp(char(value), '(^|[[:space:]])(?:/[A-Za-z0-9._-]+/|[A-Za-z]:[\\/])', 'once'));
 end
 
 function texts = collect_text_values(value)
@@ -515,7 +523,7 @@ receipt = struct('schema', 'simple-synthetic-eeglab-packaging-v3', 'status', 'pa
     'tested_simple_commit', inputReceipt.tested_simple_commit, ...
     'simple_input_contract', inputReceipt.simple_input_contract, ...
     'exclusive_rename_helper_sha256', helperDigest, ...
-    'python_executable_role', '.venv/bin/python', ...
+    'python_executable_role', 'checkout-local virtual environment', ...
     'python_runtime', inputReceipt.runtime);
 write_text_exclusive(pathValue, string(jsonencode(receipt)) + newline);
 end

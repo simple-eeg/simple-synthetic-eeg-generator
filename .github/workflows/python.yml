@@ -9,22 +9,35 @@ permissions:
 
 jobs:
   test:
-    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            python: .venv/bin/python
+          - os: ubuntu-latest
+            python: .venv/bin/python
+          - os: windows-latest
+            python: .venv/Scripts/python.exe
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
           cache: pip
-      - name: Run the normal setup without source-tree packaging artefacts
+      - name: Run the shared setup without source-tree packaging artefacts
         run: |
-          ./setup_environment
+          python setup_environment
           test ! -e build
           test ! -e src/simple_synthetic_eeg_generator.egg-info
       - name: Apply the CI-only tested dependency snapshot
-        run: ./.venv/bin/python -m pip install --require-hashes -r requirements/ci.lock
-      - run: ./.venv/bin/python -m pytest
+        run: ${{ matrix.python }} -m pip install --require-hashes -r requirements/ci.lock
+      - run: ${{ matrix.python }} -m pytest
       - name: Reject generated EEG and workflow artefacts
         run: |
           if git ls-files | grep -E '\.(set|fdt|f32le|mat|log|diary)$'; then

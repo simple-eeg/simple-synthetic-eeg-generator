@@ -78,6 +78,7 @@ verifyEqual(testCase, find_stale_partial_siblings(hiddenOutputRoot), string(hidd
 end
 
 function testReadOnlyInputTreeRemainsConsumable(testCase)
+assumeFalse(testCase, ispc, 'This fixture exercises Unix directory permissions.');
 container = [tempname ' read-only fixture'];
 input = fullfile(container, "input O'Brien"); output = fullfile(container, 'output');
 mkdir(input); mkdir(output); testCase.addTeardown(@() safe_remove_readonly(container));
@@ -85,9 +86,9 @@ write_bytes(fullfile(input, 'note.txt'), unicode2native(sprintf('synthetic-only\
 write_bytes(fullfile(input, 'array.f32le'), typecast(single([1 -2 3.5]), 'uint8'));
 write_bytes(fullfile(input, 'list.csv'), unicode2native(sprintf('subjectID,value\n001,ok\n'), 'UTF-8'));
 before = recursive_files(input, input);
-[status, diagnostic] = system(shell_command('/bin/chmod', ["-R", "a-w", string(input)]));
+[status, diagnostic] = run_command('/bin/chmod', ["-R", "a-w", string(input)]);
 assert(status == 0, 'Cannot make isolated input fixture read-only: %s', diagnostic);
-[status, ~] = system(shell_command('/bin/test', ["!", "-w", string(input)]));
+[status, ~] = run_command('/bin/test', ["!", "-w", string(input)]);
 verifyEqual(testCase, status, 0, 'Isolated input fixture did not become read-only.');
 verifyEqual(testCase, fileread(fullfile(input, 'note.txt')), sprintf('synthetic-only\n'));
 fid = fopen(fullfile(input, 'array.f32le'), 'r', 'ieee-le');
@@ -146,7 +147,7 @@ end
 
 function safe_remove_readonly(root)
 if isfolder(root)
-    system(shell_command('/bin/chmod', ["-R", "u+w", string(root)]));
+    run_command('/bin/chmod', ["-R", "u+w", string(root)]);
     rmdir(root, 's');
 end
 end

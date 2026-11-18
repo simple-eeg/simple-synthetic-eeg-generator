@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest import mock
 
 from simple_synthetic_eeg_generator import environment
+from simple_synthetic_eeg_generator.platform_support import venv_python
 from simple_synthetic_eeg_generator.environment import (
     CAPABILITY_PROBE_TIMEOUT_SECONDS,
     RUNTIME_PACKAGES,
@@ -96,17 +97,17 @@ class EnvironmentCapabilityTests(unittest.TestCase):
             ), self.assertRaises(EnvironmentCapabilityError):
                 _validate_scientific_python_capabilities()
 
-    def test_non_macos_runtime_fails_for_no_overwrite_publication(self) -> None:
-        with mock.patch.object(environment.platform, "system", return_value="Linux"):
+    def test_unsupported_runtime_fails_before_generation(self) -> None:
+        with mock.patch.object(environment.platform, "system", return_value="UnknownOS"):
             with self.assertRaises(EnvironmentCapabilityError):
                 runtime_environment_receipt(Path("/unused"))
 
     def test_project_venv_accepts_regular_or_arbitrarily_targeted_interpreter(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
-            binary = root / ".venv" / "bin"
+            binary = venv_python(root).parent
             binary.mkdir(parents=True)
-            python = binary / "python"
+            python = venv_python(root)
             python.write_bytes(b"interpreter")
             python.chmod(0o755)
             with mock.patch.object(environment.sys, "prefix", str(root / ".venv")), mock.patch.object(
@@ -127,9 +128,9 @@ class EnvironmentCapabilityTests(unittest.TestCase):
     def test_project_venv_rejects_wrong_prefix_and_old_python(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
-            binary = root / ".venv" / "bin"
+            binary = venv_python(root).parent
             binary.mkdir(parents=True)
-            python = binary / "python"
+            python = venv_python(root)
             python.write_bytes(b"interpreter")
             python.chmod(0o755)
             with mock.patch.object(environment.sys, "prefix", "/wrong"), mock.patch.object(

@@ -98,6 +98,7 @@ class SourceBoundaryTests(unittest.TestCase):
                 or (
                     path.suffix.lower() not in text_suffixes
                     and path.name not in {
+                        ".gitattributes",
                         ".gitignore",
                         "LICENSE",
                         "generate_dataset",
@@ -116,7 +117,7 @@ class SourceBoundaryTests(unittest.TestCase):
         workflow = (ROOT / "src/simple_synthetic_eeg_generator/user_workflow.py").read_text(
             encoding="utf-8"
         )
-        self.assertIn('./generate_dataset "$(cd .. && pwd -P)"', readme)
+        self.assertIn("python generate_dataset ..", readme)
         self.assertIn(f"`{TESTED_SIMPLE_COMMIT}`", readme)
         self.assertIn("simple-synthetic-eeg-demo", workflow)
         self.assertNotIn("simple/data", workflow)
@@ -131,28 +132,14 @@ class SourceBoundaryTests(unittest.TestCase):
             ROOT / "requirements/runtime.txt"
         ).read_text(encoding="utf-8")
 
-        self.assertTrue(os.access(setup, os.X_OK))
-        self.assertIn(
-            '"$generator_python" -m pip install --disable-pip-version-check',
-            setup_text,
-        )
-        self.assertIn('--requirement "$runtime_requirements"', setup_text)
-        syntax = subprocess.run(
-            ["/bin/sh", "-n", str(setup), str(ROOT / "generate_dataset")],
-            check=False,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        self.assertEqual(syntax.returncode, 0, syntax.stderr)
+        ast.parse(setup_text)
+        ast.parse((ROOT / "generate_dataset").read_text())
+        self.assertIn("venv.EnvBuilder(with_pip=True)", setup_text)
+        self.assertIn('"--requirement", str(root / "requirements/runtime.txt")', setup_text)
         self.assertNotIn("pip install .", setup_text)
         self.assertNotIn("pip install .", readme)
-        self.assertIn("```sh\n./setup_environment\n```", readme)
-        self.assertIn(
-            '```sh\n./generate_dataset "$(cd .. && pwd -P)"\n```',
-            readme,
-        )
+        self.assertIn("python setup_environment", readme)
+        self.assertIn("python generate_dataset ..", readme)
 
         dependency_block = pyproject.split("dependencies = [", 1)[1].split("]", 1)[0]
         declared_dependencies = {
@@ -195,6 +182,7 @@ class SourceBoundaryTests(unittest.TestCase):
             "environment.py",
             "errors.py",
             "model.py",
+            "platform_support.py",
             "oracle.py",
             "provenance.py",
             "seeds.py",

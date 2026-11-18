@@ -14,15 +14,16 @@ reproducibility details.
 
 ## First-time setup
 
-The generator is currently supported on macOS. You need:
+The generator uses one shared workflow for macOS, Linux, and Windows
+(see [verification coverage](#runtime-selection)). You need:
 
-- Git and Python 3.10 or later, available in Terminal;
-- MATLAB installed under `/Applications`;
-- EEGLAB installed under `Documents/MATLAB`; and
+- Git and Python 3.10 or later, available in your terminal;
+- MATLAB;
+- EEGLAB; and
 - a licensed MATLAB session able to start EEGLAB and save and reload a native
   one-file `.set` dataset.
 
-Open Terminal in the folder where you want to keep the generator. Choose a
+Open a terminal in the folder where you want to keep the generator. Choose a
 folder outside any existing Git repository, then run:
 
 ```sh
@@ -30,10 +31,11 @@ git clone https://github.com/simple-eeg/simple-synthetic-eeg-generator.git
 cd simple-synthetic-eeg-generator
 ```
 
-Then set up the Python environment:
+Then set up the Python environment (use `python3` if that is the name of
+your Python command):
 
 ```sh
-./setup_environment
+python setup_environment
 ```
 
 If GitHub asks you to sign in, use an account with access to the repository.
@@ -46,11 +48,12 @@ The setup command creates a separate Python environment in `.venv` inside the
 generator folder and installs the required packages there. It does not alter
 the system Python, MATLAB, or EEGLAB, and it does not build the generator
 package inside the checkout. You do not need to activate the environment. If
-setup is interrupted, run `./setup_environment` again; no manual cleanup is
+setup is interrupted, run `python setup_environment` again; no manual cleanup is
 needed.
 
-The generator finds MATLAB and EEGLAB in the locations above and prints their
-paths before generation. It checks the operations it needs and records the
+The generator looks for MATLAB in its standard installation folder or on
+`PATH`, and for EEGLAB under `Documents/MATLAB`. It prints the selected paths
+before generation. It checks the operations it needs and records the
 versions used in each output file.
 For other installation locations, see [runtime selection](#runtime-selection).
 
@@ -60,14 +63,14 @@ Remain in the generator's top-level folder. To create the dataset in the
 folder containing the generator, run:
 
 ```sh
-./generate_dataset "$(cd .. && pwd -P)"
+python generate_dataset ..
 ```
 
-The expression in quotes supplies the full path of the containing folder.
-To use another location, give the full path of an existing parent folder:
+`..` selects the containing folder. To use another location, give the path
+of an existing parent folder (absolute or relative to your current folder):
 
 ```sh
-./generate_dataset "/path/to/existing-parent"
+python generate_dataset "path/to/existing-parent"
 ```
 
 The parent must be outside every Git repository. Use a real folder, with no
@@ -158,18 +161,22 @@ available. The final move is atomic and refuses to overwrite existing output.
 
 This section records the tested environment, seed derivation, and validation
 details for readers inspecting or maintaining the generator. The normal user
-commands remain `./setup_environment` and `./generate_dataset`.
+commands remain `python setup_environment` and `python generate_dataset`.
 
 ### Runtime selection
 
 The reference build was tested on macOS with Apple silicon, MATLAB R2026a
 Update 4, EEGLAB 2026.0.0, Python 3.13.6, NumPy 2.2.2, SciPy 1.15.1,
 NeuroDSP 2.3.0, and Matplotlib 3.10.0. These exact versions are not required.
-Runtime checks cover dataset generation; they do not certify every function
-in the `simple` workflow.
+Python tests run on all three operating systems. The full MATLAB/EEGLAB
+workflow has been verified locally on macOS; its native save/reload check also
+runs before generation on your computer. Runtime checks cover this generator,
+not every function in the `simple` workflow.
 
-If several conventional installations exist, the newest recognised MATLAB
-and EEGLAB installations are selected. For a nonstandard installation, set
+MATLAB is sought under `/Applications` on macOS, `/usr/local/MATLAB` on Linux,
+and `Program Files/MATLAB` on Windows, then on `PATH`. EEGLAB is sought under
+`Documents/MATLAB` in your home folder. If several recognised installations
+exist in these folders, the newest is selected. For a nonstandard installation, set
 `SIMPLE_SYNTH_MATLAB_EXECUTABLE` and `SIMPLE_SYNTH_EEGLAB_ROOT` before
 generation. Both must be canonical absolute paths, with no symbolic links in
 any path component: the first names the MATLAB executable, and the second

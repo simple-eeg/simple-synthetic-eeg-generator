@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-import ctypes
 import os
 import re
 import secrets
@@ -16,6 +15,7 @@ from typing import Sequence
 from .canonical import build_manifest, write_new_bytes, write_new_csv, write_new_json
 from .audit import audit_checkout, require_audited_module_origins, require_tracked_input
 from .environment import runtime_environment_receipt
+from .platform_support import rename_directory_exclusive, sync_directory
 from .errors import ContractError, TransactionError
 from .model import canonical_array_bytes, generate_subject
 from .provenance import (
@@ -64,29 +64,17 @@ def controlled_mplconfig(parent: Path) -> Iterator[None]:
 
 
 def _fsync_directory(path: Path) -> None:
-    descriptor = os.open(path, os.O_RDONLY)
-    try:
-        os.fsync(descriptor)
-    finally:
-        os.close(descriptor)
+    sync_directory(path)
 
 
 def exclusive_atomic_rename(source: Path, destination: Path) -> None:
-    """Use macOS renamex_np(RENAME_EXCL) so promotion cannot overwrite."""
-
-    if sys.platform != "darwin":
-        raise TransactionError("Producing promotion requires macOS renamex_np")
-    libc = ctypes.CDLL(None, use_errno=True)
-    renamex = libc.renamex_np
-    renamex.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint]
-    renamex.restype = ctypes.c_int
-    RENAME_EXCL = 0x00000004
-    result = renamex(os.fsencode(source), os.fsencode(destination), RENAME_EXCL)
-    if result != 0:
-        errno_value = ctypes.get_errno()
+    """Publish a complete directory without replacing any existing destination."""
+    try:
+        rename_directory_exclusive(source, destination)
+    except OSError as exc:
         raise TransactionError(
-            f"Exclusive atomic promotion failed without overwrite (errno {errno_value})"
-        )
+            f"Exclusive atomic promotion failed without overwrite (errno {exc.errno})"
+        ) from exc
 
 
 def _refuse_existing(path: Path, label: str) -> None:

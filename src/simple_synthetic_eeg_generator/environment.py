@@ -11,6 +11,7 @@ import tempfile
 from pathlib import Path
 
 from .errors import EnvironmentCapabilityError
+from .platform_support import venv_python
 
 MINIMUM_PYTHON = (3, 10)
 RUNTIME_PACKAGES = ("matplotlib", "neurodsp", "numpy", "scipy")
@@ -21,16 +22,16 @@ def validate_project_interpreter(source_root: Path) -> None:
     """Require this checkout's virtual environment without pinning its target."""
 
     virtual_environment = source_root / ".venv"
-    binary_directory = virtual_environment / "bin"
-    interpreter = binary_directory / "python"
+    interpreter = venv_python(source_root)
+    binary_directory = interpreter.parent
     if virtual_environment.is_symlink() or not virtual_environment.is_dir():
         raise EnvironmentCapabilityError(
-            "The checkout-local .venv is absent or is a symlink; run ./setup_environment again"
+            "The checkout-local .venv is absent or is a symlink; run python setup_environment again"
         )
     if binary_directory.is_symlink() or not binary_directory.is_dir():
-        raise EnvironmentCapabilityError("The checkout-local .venv/bin directory is invalid")
+        raise EnvironmentCapabilityError("The checkout-local .venv interpreter directory is invalid")
     if not interpreter.is_file() or not os.access(interpreter, os.X_OK):
-        raise EnvironmentCapabilityError("The checkout-local .venv/bin/python is not executable")
+        raise EnvironmentCapabilityError("The checkout-local .venv Python interpreter is not executable")
     try:
         resolved_interpreter = interpreter.resolve(strict=True)
     except OSError as exc:
@@ -40,7 +41,7 @@ def validate_project_interpreter(source_root: Path) -> None:
     if Path(sys.prefix) != virtual_environment:
         raise EnvironmentCapabilityError("Python is not running from this checkout's .venv")
     if Path(sys.executable) != interpreter:
-        raise EnvironmentCapabilityError("Python was not launched as this checkout's .venv/bin/python")
+        raise EnvironmentCapabilityError("Python was not launched as this checkout's .venv Python interpreter")
     if sys.version_info[:2] < MINIMUM_PYTHON:
         required = ".".join(map(str, MINIMUM_PYTHON))
         raise EnvironmentCapabilityError(
@@ -104,9 +105,9 @@ if not all(callable(capability) for capability in capabilities):
 def runtime_environment_receipt(source_root: Path) -> dict[str, object]:
     """Validate capabilities and record the actual path-free producing runtime."""
 
-    if platform.system() != "Darwin":
+    if platform.system() not in {"Darwin", "Linux", "Windows"}:
         raise EnvironmentCapabilityError(
-            "Dataset publication currently requires macOS for exclusive no-overwrite promotion"
+            "Dataset generation supports macOS, Linux, and Windows"
         )
     validate_project_interpreter(source_root)
     packages: dict[str, str] = {}
@@ -120,8 +121,8 @@ def runtime_environment_receipt(source_root: Path) -> dict[str, object]:
         "schema": "simple-synthetic-python-runtime-v1",
         "python_version": platform.python_version(),
         "python_implementation": platform.python_implementation(),
-        "operating_system": "macOS",
-        "operating_system_release": platform.mac_ver()[0],
+        "operating_system": "macOS" if platform.system() == "Darwin" else platform.system(),
+        "operating_system_release": platform.mac_ver()[0] if platform.system() == "Darwin" else platform.release(),
         "machine": platform.machine(),
         "packages": packages,
     }

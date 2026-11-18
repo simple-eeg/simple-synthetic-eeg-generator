@@ -1,14 +1,19 @@
-#!/bin/sh
-# One-choice launcher for the fixed SIMPLE synthetic demonstration dataset.
-# Run as: ./generate_dataset <existing-parent-directory>
+#!/usr/bin/env python3
+"""Run as: python generate_dataset <existing-parent-directory>."""
 
-set -eu
+import os
+import sys
+from pathlib import Path
 
-generator_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
-generator_python="$generator_root/.venv/bin/python"
-if [ ! -x "$generator_python" ]; then
-    echo "generator environment is missing; run ./setup_environment from the repository root" >&2
-    exit 2
-fi
-exec "$generator_python" -u -I \
-    "$generator_root/tools/run_dataset_generator.py" "$@"
+
+def main():
+    root = Path(__file__).resolve().parent
+    python = root / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    if not python.is_file():
+        raise SystemExit("Generator environment is missing; run python setup_environment first")
+    os.execv(str(python), [str(python), "-u", "-I",
+             str(root / "tools/run_dataset_generator.py"), *sys.argv[1:]])
+
+
+if __name__ == "__main__":
+    main()

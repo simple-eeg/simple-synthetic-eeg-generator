@@ -25,17 +25,16 @@ fprintf('MATLAB %s and EEGLAB %s passed the required native save/reload capabili
 
 function root = require_canonical_root(variableName)
 root = string(getenv(variableName));
-assert(strlength(root) > 0 && startsWith(root, filesep), '%s must be absolute.', variableName);
+jpath = java.nio.file.Paths.get(char(root), javaArray('java.lang.String', 0));
+assert(strlength(root) > 0 && jpath.isAbsolute(), '%s must be absolute.', variableName);
 assert(isfolder(root) && ~path_is_symlink(root), '%s must be an ordinary directory.', variableName);
 canonical = string(char(java.nio.file.Paths.get(char(root), ...
     javaArray('java.lang.String', 0)).toRealPath(javaArray('java.nio.file.LinkOption', 0)).toString));
 assert(strcmp(root, canonical), '%s must be canonical and contain no symlink component.', variableName);
-parts = split(extractAfter(root, 1), filesep);
-current = string(filesep);
-for i = 1:numel(parts)
-    if strlength(parts(i)) == 0, continue; end
-    current = fullfile(current, parts(i));
-    assert(~path_is_symlink(current), '%s contains a symlink component.', variableName);
+current = jpath;
+while ~isempty(current)
+    assert(~java.nio.file.Files.isSymbolicLink(current), '%s contains a symlink component.', variableName);
+    current = current.getParent();
 end
 end
 

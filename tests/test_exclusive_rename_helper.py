@@ -1,20 +1,19 @@
 from __future__ import annotations
 
-import ctypes
-import errno
 import importlib.util
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
-HELPER = ROOT / "tools" / "exclusive_rename_macos.py"
+HELPER = ROOT / "tools" / "exclusive_rename.py"
 
 
 def load_helper():
-    spec = importlib.util.spec_from_file_location("exclusive_rename_macos", HELPER)
+    spec = importlib.util.spec_from_file_location("exclusive_rename", HELPER)
     if spec is None or spec.loader is None:
         raise RuntimeError("Cannot load exclusive rename helper")
     module = importlib.util.module_from_spec(spec)
@@ -33,7 +32,6 @@ class ExclusiveRenameHelperTests(unittest.TestCase):
             text=True,
         )
 
-    @unittest.skipUnless(sys.platform == "darwin", "renamex_np is macOS-only")
     def test_successfully_promotes_one_absent_sibling(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
@@ -45,7 +43,6 @@ class ExclusiveRenameHelperTests(unittest.TestCase):
             self.assertFalse(source.exists())
             self.assertEqual((destination / "value.txt").read_text(), "accepted")
 
-    @unittest.skipUnless(sys.platform == "darwin", "renamex_np is macOS-only")
     def test_empty_and_nonempty_existing_destinations_are_never_overwritten(self) -> None:
         for nonempty in (False, True):
             with self.subTest(nonempty=nonempty), tempfile.TemporaryDirectory() as directory:
@@ -63,7 +60,6 @@ class ExclusiveRenameHelperTests(unittest.TestCase):
                 if nonempty:
                     self.assertEqual((destination / "accepted.txt").read_text(), "accepted")
 
-    @unittest.skipUnless(sys.platform == "darwin", "renamex_np is macOS-only")
     def test_symlink_source_and_destination_are_refused_without_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
@@ -88,7 +84,6 @@ class ExclusiveRenameHelperTests(unittest.TestCase):
             self.assertEqual((source / "source.txt").read_text(), "second")
             self.assertTrue(destination_link.is_symlink())
 
-    @unittest.skipUnless(sys.platform == "darwin", "renamex_np is macOS-only")
     def test_nonsibling_and_wrong_argument_count_are_refused(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
@@ -101,7 +96,6 @@ class ExclusiveRenameHelperTests(unittest.TestCase):
             self.assertEqual(self.run_helper(source).returncode, 2)
             self.assertTrue(source.is_dir())
 
-    @unittest.skipUnless(sys.platform == "darwin", "renamex_np is macOS-only")
     def test_destination_creation_race_is_exclusive_and_preserves_both(self) -> None:
         helper = load_helper()
         with tempfile.TemporaryDirectory() as directory:
@@ -110,17 +104,20 @@ class ExclusiveRenameHelperTests(unittest.TestCase):
             source.mkdir()
             (source / "source.txt").write_text("source", encoding="utf-8")
 
-            def raced_rename(_source: bytes, _destination: bytes, _flags: int) -> int:
-                destination.mkdir()
-                (destination / "accepted.txt").write_text("accepted", encoding="utf-8")
-                ctypes.set_errno(errno.EEXIST)
-                return -1
+            real_rename = helper.rename_directory_exclusive
 
-            with self.assertRaises(SystemExit) as caught:
-                helper.promote([str(source), str(destination)], renamex=raced_rename)
+            def raced_rename(source, target):
+                destination.mkdir()
+                # An empty target is critical: ordinary Unix rename would overwrite it.
+                real_rename(source, target)
+
+            with mock.patch.object(helper, "rename_directory_exclusive", side_effect=raced_rename):
+                with self.assertRaises(SystemExit) as caught:
+                    helper.promote([str(source), str(destination)])
             self.assertEqual(caught.exception.code, 3)
             self.assertEqual((source / "source.txt").read_text(), "source")
-            self.assertEqual((destination / "accepted.txt").read_text(), "accepted")
+            self.assertTrue(destination.is_dir())
+            self.assertEqual(list(destination.iterdir()), [])
 
 
 if __name__ == "__main__":
